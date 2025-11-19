@@ -63,11 +63,9 @@ export default function Dashboard() {
     );
   }
 
-  const enrolledCourses = courses?.filter(
-    (course) =>
-      course.isFree ||
-      user?.subscriptionStatus === "active" ||
-      allProgress?.some((p) => p.courseId === course.id)
+  // Only show courses where user has started watching (has progress)
+  const enrolledCourses = courses?.filter((course) =>
+    allProgress?.some((p) => p.courseId === course.id)
   );
 
   const completedLessons = allProgress?.filter((p) => p.completed).length || 0;

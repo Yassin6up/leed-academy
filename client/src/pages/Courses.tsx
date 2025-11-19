@@ -142,6 +142,12 @@ export default function Courses() {
                           src={course.thumbnailUrl || levelImages[course.level]}
                           alt={language === "ar" ? course.titleAr : course.titleEn}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (course.thumbnailUrl && target.src !== levelImages[course.level]) {
+                              target.src = levelImages[course.level];
+                            }
+                          }}
                         />
                         <div className="absolute top-4 left-4 flex gap-2">
                           {course.isFree && (
