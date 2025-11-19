@@ -45,6 +45,8 @@ export default function AdminCourses() {
   const { language } = useLanguage();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -82,6 +84,7 @@ export default function AdminCourses() {
       duration: "8",
       thumbnailUrl: "",
       requiredPlanId: "none",
+      language: "en",
     },
   });
 
@@ -154,6 +157,60 @@ export default function AdminCourses() {
       toast({
         title: language === "ar" ? "خطأ" : "Error",
         description: error.response?.data?.message || error.message || "Failed to create course",
+        variant: "destructive",
+      });
+      setUploadProgress(0);
+    },
+  });
+
+  const updateCourseMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const formData = new FormData();
+      
+      Object.keys(data).forEach((key) => {
+        if (key !== "thumbnail" && data[key] !== null && data[key] !== undefined) {
+          formData.append(key, data[key].toString());
+        }
+      });
+      
+      if (thumbnailFile) {
+        formData.append("thumbnail", thumbnailFile);
+      }
+      
+      const response = await axios.patch(`/api/admin/courses/${id}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent: any) => {
+          const progress = progressEvent.total
+            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            : 0;
+          setUploadProgress(progress);
+        },
+      });
+      
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/courses"] });
+      toast({
+        title: language === "ar" ? "تم التحديث" : "Updated",
+        description:
+          language === "ar"
+            ? "تم تحديث الدورة بنجاح"
+            : "Course updated successfully",
+      });
+      setEditDialogOpen(false);
+      setEditingCourse(null);
+      setThumbnailFile(null);
+      setThumbnailPreview(null);
+      setUploadProgress(0);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.response?.data?.message || error.message || "Failed to update course",
         variant: "destructive",
       });
       setUploadProgress(0);
@@ -356,6 +413,42 @@ export default function AdminCourses() {
     setLessonDialogOpen(true);
   };
 
+  const openEditDialog = (course: Course) => {
+    setEditingCourse(course);
+    form.reset({
+      titleEn: course.titleEn,
+      titleAr: course.titleAr,
+      descriptionEn: course.descriptionEn || "",
+      descriptionAr: course.descriptionAr || "",
+      level: course.level.toString(),
+      price: course.price || "0",
+      isFree: course.isFree || false,
+      instructorEn: course.instructorEn || "",
+      instructorAr: course.instructorAr || "",
+      duration: course.duration?.toString() || "8",
+      thumbnailUrl: course.thumbnailUrl || "",
+      requiredPlanId: course.requiredPlanId || "none",
+      language: course.language || "en",
+    });
+    setThumbnailPreview(course.thumbnailUrl || null);
+    setEditDialogOpen(true);
+  };
+
+  const onEditSubmit = (data: any) => {
+    if (!editingCourse) return;
+    
+    updateCourseMutation.mutate({
+      id: editingCourse.id,
+      data: {
+        ...data,
+        level: data.level,
+        price: data.price,
+        duration: data.duration,
+        requiredPlanId: data.requiredPlanId === "none" ? null : data.requiredPlanId,
+      },
+    });
+  };
+
   // Update default order when lessons change
   useEffect(() => {
     if (lessons && lessonDialogOpen) {
@@ -454,7 +547,7 @@ export default function AdminCourses() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <FormField
                     control={form.control}
                     name="level"
@@ -474,6 +567,30 @@ export default function AdminCourses() {
                             <SelectItem value="1">Level 1</SelectItem>
                             <SelectItem value="2">Level 2</SelectItem>
                             <SelectItem value="3">Level 3</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="language"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Content Language</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-language">
+                              <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="en">English</SelectItem>
+                            <SelectItem value="ar">Arabic</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -665,6 +782,307 @@ export default function AdminCourses() {
         </Dialog>
       </div>
 
+      {/* Edit Course Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {language === "ar" ? "تعديل الدورة" : "Edit Course"}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="titleEn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title (English)</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-edit-title-en" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="titleAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title (Arabic)</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-edit-title-ar" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="descriptionEn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (English)</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} data-testid="input-edit-desc-en" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="descriptionAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Arabic)</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} data-testid="input-edit-desc-ar" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-4 gap-4">
+                <FormField
+                  control={form.control}
+                  name="level"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Level</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-level">
+                            <SelectValue placeholder="Select level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1">Level 1</SelectItem>
+                          <SelectItem value="2">Level 2</SelectItem>
+                          <SelectItem value="3">Level 3</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="language"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Content Language</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-language">
+                            <SelectValue placeholder="Select language" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="en">English</SelectItem>
+                          <SelectItem value="ar">Arabic</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price ($)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...field}
+                          data-testid="input-edit-price"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration (hours)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          data-testid="input-edit-duration"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="instructorEn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instructor (English)</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-edit-instructor-en" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="instructorAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instructor (Arabic)</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-edit-instructor-ar" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-thumbnail-upload">
+                  {language === "ar" ? "صورة الدورة المصغرة" : "Course Thumbnail"}
+                </Label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="edit-thumbnail-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleThumbnailChange}
+                    data-testid="input-edit-thumbnail-file"
+                    className="flex-1"
+                  />
+                  {thumbnailFile && (
+                    <Badge variant="secondary">
+                      {(thumbnailFile.size / 1024).toFixed(0)} KB
+                    </Badge>
+                  )}
+                </div>
+                {thumbnailPreview && (
+                  <div className="mt-2">
+                    <img
+                      src={thumbnailPreview}
+                      alt="Thumbnail preview"
+                      className="w-32 h-32 object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {language === "ar"
+                    ? "PNG، JPEG، أو WebP (حجم أقصى 5 ميجابايت)"
+                    : "PNG, JPEG, or WebP (max 5MB)"}
+                </p>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="requiredPlanId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Required Subscription Plan (Optional)</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-edit-required-plan">
+                          <SelectValue placeholder="Select a plan or leave empty for free access" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No plan required</SelectItem>
+                        {plans?.map((plan) => (
+                          <SelectItem key={plan.id} value={plan.id}>
+                            {language === "ar" ? plan.nameAr : plan.nameEn} - ${plan.price}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isFree"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Free Course</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Make this course completely free for all users
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-edit-is-free"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {uploadProgress > 0 && uploadProgress < 100 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {language === "ar" ? "جاري الرفع..." : "Uploading..."}
+                    </span>
+                    <span className="font-medium">{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={updateCourseMutation.isPending || (uploadProgress > 0 && uploadProgress < 100)}
+                className="w-full"
+                data-testid="button-submit-edit-course"
+              >
+                {updateCourseMutation.isPending
+                  ? language === "ar"
+                    ? "جاري التحديث..."
+                    : "Updating..."
+                  : language === "ar"
+                    ? "تحديث"
+                    : "Update"}
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {courses?.map((course) => (
           <Card
@@ -687,6 +1105,7 @@ export default function AdminCourses() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => openEditDialog(course)}
                     data-testid={`button-edit-${course.id}`}
                   >
                     <Edit className="h-4 w-4" />
