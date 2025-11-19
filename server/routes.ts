@@ -789,6 +789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const videoFile = req.file;
       let uploadedFilePath: string | null = null;
       let lessonId: string | null = null;
+      let lessonCourseId: string | null = null;
 
       try {
         // Validate video size if provided
@@ -809,6 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
 
         const validated = insertLessonSchema.parse(lessonData);
+        lessonCourseId = validated.courseId;
 
         // Create lesson in database
         const lesson = await storage.createLesson(validated);
@@ -832,24 +834,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json(lesson);
       } catch (error: any) {
-        // Comprehensive cleanup on error
-        const filesToCleanup: string[] = [];
-        
-        // Add temp file if it exists
+        // Comprehensive cleanup on error - clean up temp file
         if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
-          filesToCleanup.push(uploadedFilePath);
+          try {
+            fs.unlinkSync(uploadedFilePath);
+          } catch {}
         }
         
-        // Add final video directory if lesson was created
-        if (lessonId && validated?.courseId) {
-          const videoDir = path.join(getCourseUploadDir(validated.courseId), "videos", lessonId);
+        // Clean up final video directory if lesson was created
+        if (lessonId && lessonCourseId) {
+          const videoDir = path.join(getCourseUploadDir(lessonCourseId), "videos", lessonId);
           if (fs.existsSync(videoDir)) {
-            filesToCleanup.push(videoDir);
+            try {
+              fs.rmSync(videoDir, { recursive: true, force: true });
+            } catch {}
           }
         }
-        
-        // Clean up all files
-        await cleanupFiles(filesToCleanup);
 
         // Delete the lesson from database if it was created
         if (lessonId) {

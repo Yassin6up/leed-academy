@@ -5,12 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, Clock, TrendingUp, Award } from "lucide-react";
-import type { Course, Progress as UserProgress } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import { BookOpen, Clock, TrendingUp, Award, CreditCard, CheckCircle2, AlertCircle, XCircle, Calendar } from "lucide-react";
+import type { Course, Progress as UserProgress, Subscription, SubscriptionPlan } from "@shared/schema";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 export default function Dashboard() {
   const { t, language } = useLanguage();
@@ -37,6 +39,13 @@ export default function Dashboard() {
 
   const { data: allProgress } = useQuery<UserProgress[]>({
     queryKey: ["/api/user/progress"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: subscription, isLoading: isLoadingSubscription } = useQuery<
+    (Subscription & { plan: SubscriptionPlan | null }) | null
+  >({
+    queryKey: ["/api/user/subscription"],
     enabled: isAuthenticated,
   });
 
@@ -98,6 +107,56 @@ export default function Dashboard() {
     return (completed / total) * 100;
   };
 
+  const getSubscriptionStatus = () => {
+    if (!subscription) return "none";
+    
+    const now = new Date();
+    const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
+    
+    if (subscription.status === "active" && endDate && now > endDate) {
+      return "expired";
+    }
+    
+    return subscription.status;
+  };
+
+  const subscriptionStatus = getSubscriptionStatus();
+  
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "active":
+        return {
+          icon: CheckCircle2,
+          label: t("subscription.status.active"),
+          variant: "default" as const,
+          color: "text-green-500",
+        };
+      case "pending":
+        return {
+          icon: AlertCircle,
+          label: t("subscription.status.pending"),
+          variant: "secondary" as const,
+          color: "text-yellow-500",
+        };
+      case "expired":
+        return {
+          icon: XCircle,
+          label: t("subscription.status.expired"),
+          variant: "destructive" as const,
+          color: "text-red-500",
+        };
+      default:
+        return {
+          icon: AlertCircle,
+          label: t("subscription.status.inactive"),
+          variant: "outline" as const,
+          color: "text-muted-foreground",
+        };
+    }
+  };
+
+  const statusConfig = getStatusConfig(subscriptionStatus);
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -141,6 +200,122 @@ export default function Dashboard() {
                 </Card>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Subscription Status */}
+        <section className="py-12 bg-muted/30">
+          <div className="container mx-auto px-6">
+            <h2 className="text-2xl font-heading font-bold text-foreground mb-6">
+              {t("subscription.title")}
+            </h2>
+            
+            {isLoadingSubscription ? (
+              <Card>
+                <CardContent className="p-12">
+                  <div className="h-32 bg-muted animate-pulse rounded-lg" />
+                </CardContent>
+              </Card>
+            ) : subscription && subscription.plan ? (
+              <Card className="hover-elevate transition-all" data-testid="card-subscription-status">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="h-8 w-8 text-primary" />
+                      <div>
+                        <CardTitle className="text-xl mb-1">
+                          {language === "ar" ? subscription.plan.nameAr : subscription.plan.nameEn}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {t("subscription.current-plan")}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant={statusConfig.variant} className="flex items-center gap-1" data-testid="badge-subscription-status">
+                      <statusConfig.icon className="h-3 w-3" />
+                      {statusConfig.label}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    {subscription.startDate && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1 flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {t("subscription.started")}
+                        </p>
+                        <p className="font-medium text-foreground" data-testid="text-subscription-start-date">
+                          {format(new Date(subscription.startDate), "MMM dd, yyyy")}
+                        </p>
+                      </div>
+                    )}
+                    {subscription.endDate && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1 flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {subscriptionStatus === "expired"
+                            ? t("subscription.expired-on")
+                            : t("subscription.expires")}
+                        </p>
+                        <p className={`font-medium ${subscriptionStatus === "expired" ? "text-destructive" : "text-foreground"}`} data-testid="text-subscription-end-date">
+                          {format(new Date(subscription.endDate), "MMM dd, yyyy")}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {t("pricing.features")}
+                      </p>
+                      <p className="font-medium text-foreground">
+                        {subscription.plan.featuresEn?.length || 0} {language === "ar" ? "ميزات" : "features"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Button asChild variant="default" data-testid="button-upgrade-plan">
+                      <Link href="/pricing">
+                        <a>
+                          {subscriptionStatus === "active"
+                            ? t("subscription.upgrade")
+                            : subscriptionStatus === "expired"
+                              ? t("subscription.view-plans")
+                              : t("subscription.change")}
+                        </a>
+                      </Link>
+                    </Button>
+                    {subscriptionStatus === "pending" && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>
+                          {language === "ar"
+                            ? "سيتم تفعيل اشتراكك بعد موافقة الإدارة على الدفع"
+                            : "Your subscription will be activated after admin approves your payment"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="hover-elevate transition-all" data-testid="card-no-subscription">
+                <CardContent className="p-12 text-center">
+                  <CreditCard className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-xl font-heading font-bold text-foreground mb-2">
+                    {t("subscription.no-subscription")}
+                  </h3>
+                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                    {t("subscription.no-subscription-desc")}
+                  </p>
+                  <Button asChild size="lg" data-testid="button-view-plans">
+                    <Link href="/pricing">
+                      <a>{t("subscription.view-plans")}</a>
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </section>
 
