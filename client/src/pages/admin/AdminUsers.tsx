@@ -1,5 +1,6 @@
 import { useLanguage } from "@/lib/i18n";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -11,14 +12,172 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { MoreVertical, UserCheck, UserX, XCircle, Trash2 } from "lucide-react";
 import type { User } from "@shared/schema";
+import { useState } from "react";
+import { useUser } from "@/lib/auth";
 
 export default function AdminUsers() {
   const { language } = useLanguage();
+  const { toast } = useToast();
+  const { user: currentUser } = useUser();
+  
+  const [actionDialog, setActionDialog] = useState<{
+    open: boolean;
+    type: "deactivate" | "activate" | "delete" | "cancel-subscription" | null;
+    user: User | null;
+  }>({
+    open: false,
+    type: null,
+    user: null,
+  });
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
   });
+
+  const deactivateMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return await apiRequest(`/api/admin/users/${userId}/deactivate`, {
+        method: "PATCH",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: language === "ar" ? "تم التعطيل" : "User Deactivated",
+        description: language === "ar" 
+          ? "تم تعطيل المستخدم بنجاح" 
+          : "User has been deactivated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.message || "Failed to deactivate user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return await apiRequest(`/api/admin/users/${userId}/activate`, {
+        method: "PATCH",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: language === "ar" ? "تم التفعيل" : "User Activated",
+        description: language === "ar" 
+          ? "تم تفعيل المستخدم بنجاح" 
+          : "User has been activated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.message || "Failed to activate user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return await apiRequest(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: language === "ar" ? "تم الحذف" : "User Deleted",
+        description: language === "ar" 
+          ? "تم حذف المستخدم بنجاح" 
+          : "User has been deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return await apiRequest(`/api/admin/users/${userId}/cancel-subscription`, {
+        method: "PATCH",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: language === "ar" ? "تم الإلغاء" : "Subscription Cancelled",
+        description: language === "ar" 
+          ? "تم إلغاء الاشتراك بنجاح" 
+          : "Subscription has been cancelled successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.message || "Failed to cancel subscription",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAction = () => {
+    if (!actionDialog.user) return;
+
+    switch (actionDialog.type) {
+      case "deactivate":
+        deactivateMutation.mutate(actionDialog.user.id);
+        break;
+      case "activate":
+        activateMutation.mutate(actionDialog.user.id);
+        break;
+      case "delete":
+        deleteMutation.mutate(actionDialog.user.id);
+        break;
+      case "cancel-subscription":
+        cancelSubscriptionMutation.mutate(actionDialog.user.id);
+        break;
+    }
+
+    setActionDialog({ open: false, type: null, user: null });
+  };
+
+  const openActionDialog = (type: typeof actionDialog.type, user: User) => {
+    setActionDialog({ open: true, type, user });
+  };
+
+  const isCurrentUser = (userId: string) => currentUser?.id === userId;
 
   if (isLoading) {
     return (
@@ -50,8 +209,10 @@ export default function AdminUsers() {
                 <TableHead>{language === "ar" ? "المستخدم" : "User"}</TableHead>
                 <TableHead>{language === "ar" ? "البريد الإلكتروني" : "Email"}</TableHead>
                 <TableHead>{language === "ar" ? "الدور" : "Role"}</TableHead>
+                <TableHead>{language === "ar" ? "الحالة" : "Status"}</TableHead>
                 <TableHead>{language === "ar" ? "الاشتراك" : "Subscription"}</TableHead>
                 <TableHead>{language === "ar" ? "التاريخ" : "Joined"}</TableHead>
+                <TableHead className="text-right">{language === "ar" ? "الإجراءات" : "Actions"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -82,6 +243,17 @@ export default function AdminUsers() {
                   </TableCell>
                   <TableCell>
                     <Badge
+                      variant={user.isActive ? "default" : "secondary"}
+                      data-testid={`badge-status-${user.id}`}
+                    >
+                      {user.isActive 
+                        ? (language === "ar" ? "نشط" : "Active")
+                        : (language === "ar" ? "معطل" : "Inactive")
+                      }
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
                       variant={
                         user.subscriptionStatus === "active"
                           ? "default"
@@ -96,12 +268,119 @@ export default function AdminUsers() {
                       ? new Date(user.createdAt).toLocaleDateString()
                       : "-"}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          data-testid={`button-actions-${user.id}`}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>
+                          {language === "ar" ? "الإجراءات" : "Actions"}
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        
+                        {user.isActive ? (
+                          <DropdownMenuItem
+                            onClick={() => openActionDialog("deactivate", user)}
+                            disabled={isCurrentUser(user.id)}
+                            data-testid={`action-deactivate-${user.id}`}
+                          >
+                            <UserX className="h-4 w-4 mr-2" />
+                            {language === "ar" ? "تعطيل الحساب" : "Deactivate Account"}
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={() => openActionDialog("activate", user)}
+                            data-testid={`action-activate-${user.id}`}
+                          >
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            {language === "ar" ? "تفعيل الحساب" : "Activate Account"}
+                          </DropdownMenuItem>
+                        )}
+
+                        {user.subscriptionStatus && user.subscriptionStatus !== "none" && user.subscriptionStatus !== "cancelled" && (
+                          <DropdownMenuItem
+                            onClick={() => openActionDialog("cancel-subscription", user)}
+                            data-testid={`action-cancel-subscription-${user.id}`}
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            {language === "ar" ? "إلغاء الاشتراك" : "Cancel Subscription"}
+                          </DropdownMenuItem>
+                        )}
+
+                        <DropdownMenuSeparator />
+                        
+                        <DropdownMenuItem
+                          onClick={() => openActionDialog("delete", user)}
+                          disabled={isCurrentUser(user.id)}
+                          className="text-destructive focus:text-destructive"
+                          data-testid={`action-delete-${user.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {language === "ar" ? "حذف المستخدم" : "Delete User"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={actionDialog.open} onOpenChange={(open) => !open && setActionDialog({ open: false, type: null, user: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {actionDialog.type === "deactivate" && (language === "ar" ? "تعطيل الحساب" : "Deactivate Account")}
+              {actionDialog.type === "activate" && (language === "ar" ? "تفعيل الحساب" : "Activate Account")}
+              {actionDialog.type === "delete" && (language === "ar" ? "حذف المستخدم" : "Delete User")}
+              {actionDialog.type === "cancel-subscription" && (language === "ar" ? "إلغاء الاشتراك" : "Cancel Subscription")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {actionDialog.type === "deactivate" && (
+                language === "ar" 
+                  ? "هل أنت متأكد من تعطيل هذا الحساب؟ لن يتمكن المستخدم من تسجيل الدخول."
+                  : "Are you sure you want to deactivate this account? The user will not be able to log in."
+              )}
+              {actionDialog.type === "activate" && (
+                language === "ar"
+                  ? "هل أنت متأكد من تفعيل هذا الحساب؟"
+                  : "Are you sure you want to activate this account?"
+              )}
+              {actionDialog.type === "delete" && (
+                language === "ar"
+                  ? "هل أنت متأكد من حذف هذا المستخدم؟ هذا الإجراء لا رجعة فيه وسيتم حذف جميع البيانات المرتبطة."
+                  : "Are you sure you want to delete this user? This action cannot be undone and will delete all associated data."
+              )}
+              {actionDialog.type === "cancel-subscription" && (
+                language === "ar"
+                  ? "هل أنت متأكد من إلغاء اشتراك هذا المستخدم؟"
+                  : "Are you sure you want to cancel this user's subscription?"
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-action">
+              {language === "ar" ? "إلغاء" : "Cancel"}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleAction}
+              data-testid="button-confirm-action"
+              className={actionDialog.type === "delete" ? "bg-destructive hover:bg-destructive/90" : ""}
+            >
+              {language === "ar" ? "تأكيد" : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
