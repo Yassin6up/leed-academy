@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -35,9 +36,10 @@ import {
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import axios from "axios";
 
 export default function AdminCourses() {
   const { language } = useLanguage();
@@ -45,6 +47,10 @@ export default function AdminCourses() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["/api/admin/courses"],
@@ -99,7 +105,34 @@ export default function AdminCourses() {
 
   const createCourseMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/courses", data);
+      const formData = new FormData();
+      
+      // Append all form fields
+      Object.keys(data).forEach((key) => {
+        if (key !== "thumbnail" && data[key] !== null && data[key] !== undefined) {
+          formData.append(key, data[key].toString());
+        }
+      });
+      
+      // Append thumbnail file if selected
+      if (thumbnailFile) {
+        formData.append("thumbnail", thumbnailFile);
+      }
+      
+      // Use axios for upload progress tracking
+      const response = await axios.post("/api/admin/courses", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent: any) => {
+          const progress = progressEvent.total
+            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            : 0;
+          setUploadProgress(progress);
+        },
+      });
+      
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/courses"] });
@@ -111,7 +144,18 @@ export default function AdminCourses() {
             : "Course created successfully",
       });
       setDialogOpen(false);
+      setThumbnailFile(null);
+      setThumbnailPreview(null);
+      setUploadProgress(0);
       form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.response?.data?.message || error.message || "Failed to create course",
+        variant: "destructive",
+      });
+      setUploadProgress(0);
     },
   });
 
@@ -165,6 +209,40 @@ export default function AdminCourses() {
     },
   });
 
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "يرجى تحميل صورة فقط" : "Please upload an image file only",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "حجم الصورة يجب أن يكون أقل من 5 ميجابايت" : "Image size must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setThumbnailFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const onSubmit = (data: any) => {
     createCourseMutation.mutate({
       ...data,
@@ -172,7 +250,6 @@ export default function AdminCourses() {
       price: parseFloat(data.price),
       duration: parseInt(data.duration),
       requiredPlanId: data.requiredPlanId === "none" ? null : data.requiredPlanId,
-      thumbnailUrl: data.thumbnailUrl || null,
     });
   };
 
@@ -378,23 +455,41 @@ export default function AdminCourses() {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="thumbnailUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Thumbnail URL</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="https://example.com/thumbnail.jpg"
-                          data-testid="input-thumbnail-url"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <div className="space-y-2">
+                  <Label htmlFor="thumbnail-upload">
+                    {language === "ar" ? "صورة الدورة المصغرة" : "Course Thumbnail"}
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="thumbnail-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleThumbnailChange}
+                      ref={fileInputRef}
+                      data-testid="input-thumbnail-file"
+                      className="flex-1"
+                    />
+                    {thumbnailFile && (
+                      <Badge variant="secondary">
+                        {(thumbnailFile.size / 1024).toFixed(0)} KB
+                      </Badge>
+                    )}
+                  </div>
+                  {thumbnailPreview && (
+                    <div className="mt-2">
+                      <img
+                        src={thumbnailPreview}
+                        alt="Thumbnail preview"
+                        className="w-32 h-32 object-cover rounded-lg border"
+                      />
+                    </div>
                   )}
-                />
+                  <p className="text-xs text-muted-foreground">
+                    {language === "ar"
+                      ? "PNG، JPEG، أو WebP (حجم أقصى 5 ميجابايت)"
+                      : "PNG, JPEG, or WebP (max 5MB)"}
+                  </p>
+                </div>
 
                 <FormField
                   control={form.control}
@@ -447,9 +542,21 @@ export default function AdminCourses() {
                   )}
                 />
 
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {language === "ar" ? "جاري الرفع..." : "Uploading..."}
+                      </span>
+                      <span className="font-medium">{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="h-2" />
+                  </div>
+                )}
+
                 <Button
                   type="submit"
-                  disabled={createCourseMutation.isPending}
+                  disabled={createCourseMutation.isPending || (uploadProgress > 0 && uploadProgress < 100)}
                   className="w-full"
                   data-testid="button-submit-course"
                 >

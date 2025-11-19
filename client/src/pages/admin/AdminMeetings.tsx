@@ -159,7 +159,7 @@ export default function AdminMeetings() {
       scheduledAt: localDateTime,
       zoomLink: meeting.zoomLink,
       duration: meeting.duration.toString(),
-      isPaidOnly: meeting.isPaidOnly,
+      isPaidOnly: meeting.isPaidOnly ?? true,
       courseId: meeting.courseId || "none",
     });
     setDialogOpen(true);

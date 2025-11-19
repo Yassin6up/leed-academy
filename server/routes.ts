@@ -7,6 +7,18 @@ import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
 import fs from "fs";
+import {
+  generateUniqueFilename,
+  ensureDir,
+  getCourseUploadDir,
+  cleanupCourseDir,
+  validateMimeType,
+  validateFileSize,
+  MAX_THUMBNAIL_SIZE,
+  MAX_VIDEO_SIZE,
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_VIDEO_TYPES,
+} from "./uploadHelpers";
 import express from "express";
 
 // Auth middleware
@@ -571,14 +583,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(courses);
   });
 
-  app.post("/api/admin/courses", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const validated = insertCourseSchema.parse(req.body);
-      const course = await storage.createCourse(validated);
-      res.json(course);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
+  // Configure multer for course uploads (thumbnail + videos)
+  const courseUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => {
+        const tempDir = path.join(process.cwd(), "uploads", "temp");
+        ensureDir(tempDir);
+        cb(null, tempDir);
+      },
+      filename: (_req, file, cb) => {
+        const uniqueName = generateUniqueFilename(file.originalname, file.fieldname);
+        cb(null, uniqueName);
+      },
+    }),
+    limits: {
+      fileSize: MAX_VIDEO_SIZE, // Max 2GB for videos
+      files: 20, // Max 20 files total (1 thumbnail + up to 19 lesson videos)
+    },
+    fileFilter: (_req, file, cb) => {
+      if (file.fieldname === "thumbnail") {
+        if (!validateMimeType(file.mimetype, ALLOWED_IMAGE_TYPES)) {
+          return cb(new Error("Invalid thumbnail format. Only JPEG, PNG, and WebP are allowed."));
+        }
+      } else if (file.fieldname.startsWith("lessonVideo_")) {
+        if (!validateMimeType(file.mimetype, ALLOWED_VIDEO_TYPES)) {
+          return cb(new Error("Invalid video format. Only MP4, WebM, and MOV are allowed."));
+        }
+      }
+      cb(null, true);
+    },
+  });
+
+  app.post("/api/admin/courses", isAuthenticated, requireAdmin, (req, res) => {
+    courseUpload.fields([
+      { name: "thumbnail", maxCount: 1 },
+      { name: "lessonVideos", maxCount: 20 },
+    ])(req, res, async (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "File size exceeds 2GB limit" });
+        }
+        if (err.code === "LIMIT_FILE_COUNT") {
+          return res.status(400).json({ message: "Too many files uploaded" });
+        }
+        return res.status(400).json({ message: `Upload error: ${err.message}` });
+      }
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const uploadedFiles: string[] = [];
+      let courseId: string | null = null;
+
+      try {
+        // Validate thumbnail size if provided
+        if (files.thumbnail && files.thumbnail[0]) {
+          if (!validateFileSize(files.thumbnail[0].size, MAX_THUMBNAIL_SIZE)) {
+            throw new Error("Thumbnail size exceeds 5MB limit");
+          }
+          uploadedFiles.push(files.thumbnail[0].path);
+        }
+
+        // Validate lesson video sizes if provided
+        if (files.lessonVideos) {
+          for (const video of files.lessonVideos) {
+            if (!validateFileSize(video.size, MAX_VIDEO_SIZE)) {
+              throw new Error(`Video ${video.originalname} exceeds 2GB limit`);
+            }
+            uploadedFiles.push(video.path);
+          }
+        }
+
+        // Parse and validate course data
+        const courseData = {
+          ...req.body,
+          level: parseInt(req.body.level),
+          price: parseFloat(req.body.price),
+          duration: parseInt(req.body.duration),
+          isFree: req.body.isFree === "true" || req.body.isFree === true,
+          requiredPlanId: req.body.requiredPlanId || null,
+        };
+
+        const validated = insertCourseSchema.parse(courseData);
+
+        // Create course in database
+        const course = await storage.createCourse(validated);
+        courseId = course.id;
+
+        // Move thumbnail to final destination if uploaded
+        if (files.thumbnail && files.thumbnail[0] && courseId) {
+          const thumbnailFile = files.thumbnail[0];
+          const courseDir = getCourseUploadDir(courseId);
+          const thumbnailDir = path.join(courseDir, "thumbnails");
+          ensureDir(thumbnailDir);
+          
+          const finalPath = path.join(thumbnailDir, generateUniqueFilename(thumbnailFile.originalname, "thumbnail"));
+          fs.renameSync(thumbnailFile.path, finalPath);
+          
+          // Update course with thumbnail path
+          await storage.updateCourse(courseId, {
+            thumbnailUrl: `/uploads/courses/${courseId}/thumbnails/${path.basename(finalPath)}`,
+          });
+        }
+
+        res.json(course);
+      } catch (error: any) {
+        // Cleanup uploaded files on error
+        for (const filePath of uploadedFiles) {
+          try {
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+          } catch {}
+        }
+
+        // Cleanup course directory if created
+        if (courseId) {
+          await cleanupCourseDir(courseId);
+          // Optionally delete the course from database if it was created
+          try {
+            await storage.deleteCourse(courseId);
+          } catch {}
+        }
+
+        res.status(400).json({ message: error.message || "Failed to create course" });
+      }
+    });
   });
 
   app.patch("/api/admin/courses/:id", isAuthenticated, requireAdmin, async (req, res) => {
