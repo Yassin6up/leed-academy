@@ -376,6 +376,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Protected routes
+  app.get("/api/user/subscription", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      const subscription = await storage.getUserSubscription(userId);
+      
+      if (!subscription) {
+        return res.json(null);
+      }
+      
+      const plan = await storage.getSubscriptionPlan(subscription.planId);
+      
+      res.json({
+        ...subscription,
+        plan: plan || null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/user/progress", isAuthenticated, async (req, res) => {
     const progress = await storage.getUserProgress((req.session as any)?.userId);
     res.json(progress);
