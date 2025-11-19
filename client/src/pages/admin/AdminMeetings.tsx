@@ -68,7 +68,7 @@ export default function AdminMeetings() {
       zoomLink: "",
       duration: "60",
       isPaidOnly: true,
-      courseId: "",
+      courseId: "none",
     },
   });
 
@@ -78,7 +78,7 @@ export default function AdminMeetings() {
         ...data,
         duration: parseInt(data.duration),
         scheduledAt: new Date(data.scheduledAt).toISOString(),
-        courseId: data.courseId || null,
+        courseId: data.courseId === "none" ? null : data.courseId,
       });
     },
     onSuccess: () => {
@@ -102,7 +102,7 @@ export default function AdminMeetings() {
         ...data,
         duration: parseInt(data.duration),
         scheduledAt: new Date(data.scheduledAt).toISOString(),
-        courseId: data.courseId || null,
+        courseId: data.courseId === "none" ? null : data.courseId,
       });
     },
     onSuccess: () => {
@@ -160,7 +160,7 @@ export default function AdminMeetings() {
       zoomLink: meeting.zoomLink,
       duration: meeting.duration.toString(),
       isPaidOnly: meeting.isPaidOnly,
-      courseId: meeting.courseId || "",
+      courseId: meeting.courseId || "none",
     });
     setDialogOpen(true);
   };
@@ -377,7 +377,7 @@ export default function AdminMeetings() {
                       </FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value}
+                        value={field.value || "none"}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-course">
@@ -385,7 +385,7 @@ export default function AdminMeetings() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">
+                          <SelectItem value="none">
                             {language === "ar" ? "بدون ربط" : "No link"}
                           </SelectItem>
                           {courses?.map((course) => (

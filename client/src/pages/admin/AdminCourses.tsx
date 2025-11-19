@@ -72,7 +72,7 @@ export default function AdminCourses() {
       instructorAr: "",
       duration: "8",
       thumbnailUrl: "",
-      requiredPlanId: "",
+      requiredPlanId: "none",
     },
   });
 
@@ -171,7 +171,7 @@ export default function AdminCourses() {
       level: parseInt(data.level),
       price: parseFloat(data.price),
       duration: parseInt(data.duration),
-      requiredPlanId: data.requiredPlanId || null,
+      requiredPlanId: data.requiredPlanId === "none" ? null : data.requiredPlanId,
       thumbnailUrl: data.thumbnailUrl || null,
     });
   };
@@ -404,7 +404,7 @@ export default function AdminCourses() {
                       <FormLabel>Required Subscription Plan (Optional)</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value}
+                        value={field.value || "none"}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-required-plan">
@@ -412,7 +412,7 @@ export default function AdminCourses() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No plan required</SelectItem>
+                          <SelectItem value="none">No plan required</SelectItem>
                           {plans?.map((plan) => (
                             <SelectItem key={plan.id} value={plan.id}>
                               {language === "ar" ? plan.nameAr : plan.nameEn} - ${plan.price}
