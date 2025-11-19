@@ -123,8 +123,8 @@ export default function AdminCourses() {
       });
       
       // Append thumbnail file if selected
-      if (thumbnailFile) {
-        formData.append("thumbnail", thumbnailFile);
+      if (createThumbnailFile) {
+        formData.append("thumbnail", createThumbnailFile);
       }
       
       // Use axios for upload progress tracking
@@ -136,7 +136,7 @@ export default function AdminCourses() {
           const progress = progressEvent.total
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
             : 0;
-          setUploadProgress(progress);
+          setCreateUploadProgress(progress);
         },
       });
       
@@ -152,9 +152,9 @@ export default function AdminCourses() {
             : "Course created successfully",
       });
       setDialogOpen(false);
-      setThumbnailFile(null);
-      setThumbnailPreview(null);
-      setUploadProgress(0);
+      setCreateThumbnailFile(null);
+      setCreateThumbnailPreview(null);
+      setCreateUploadProgress(0);
       form.reset();
     },
     onError: (error: any) => {
@@ -163,7 +163,7 @@ export default function AdminCourses() {
         description: error.response?.data?.message || error.message || "Failed to create course",
         variant: "destructive",
       });
-      setUploadProgress(0);
+      setCreateUploadProgress(0);
     },
   });
 
@@ -177,8 +177,8 @@ export default function AdminCourses() {
         }
       });
       
-      if (thumbnailFile) {
-        formData.append("thumbnail", thumbnailFile);
+      if (editThumbnailFile) {
+        formData.append("thumbnail", editThumbnailFile);
       }
       
       const response = await axios.patch(`/api/admin/courses/${id}`, formData, {
@@ -189,14 +189,14 @@ export default function AdminCourses() {
           const progress = progressEvent.total
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
             : 0;
-          setUploadProgress(progress);
+          setEditUploadProgress(progress);
         },
       });
       
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/courses"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/courses"] });
       toast({
         title: language === "ar" ? "تم التحديث" : "Updated",
         description:
@@ -206,9 +206,9 @@ export default function AdminCourses() {
       });
       setEditDialogOpen(false);
       setEditingCourse(null);
-      setThumbnailFile(null);
-      setThumbnailPreview(null);
-      setUploadProgress(0);
+      setEditThumbnailFile(null);
+      setEditThumbnailPreview(null);
+      setEditUploadProgress(0);
     },
     onError: (error: any) => {
       toast({
@@ -216,7 +216,7 @@ export default function AdminCourses() {
         description: error.response?.data?.message || error.message || "Failed to update course",
         variant: "destructive",
       });
-      setUploadProgress(0);
+      setEditUploadProgress(0);
     },
   });
 
@@ -307,7 +307,7 @@ export default function AdminCourses() {
     },
   });
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCreateThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type (images only)
@@ -334,12 +334,50 @@ export default function AdminCourses() {
         return;
       }
       
-      setThumbnailFile(file);
+      setCreateThumbnailFile(file);
       
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
+        setCreateThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type (images only)
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "يرجى تحميل صورة (JPEG، PNG، أو WebP)" : "Please upload an image (JPEG, PNG, or WebP)",
+          variant: "destructive",
+        });
+        e.target.value = ''; // Reset input
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "حجم الصورة يجب أن يكون أقل من 5 ميجابايت" : "Image size must be less than 5MB",
+          variant: "destructive",
+        });
+        e.target.value = ''; // Reset input
+        return;
+      }
+      
+      setEditThumbnailFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditThumbnailPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -418,8 +456,9 @@ export default function AdminCourses() {
 
   const openEditDialog = (course: Course) => {
     setEditingCourse(course);
-    setThumbnailFile(null);
-    setUploadProgress(0);
+    setEditThumbnailFile(null);
+    setEditUploadProgress(0);
+    setEditThumbnailPreview(course.thumbnailUrl || null);
     form.reset({
       titleEn: course.titleEn,
       titleAr: course.titleAr,
@@ -431,11 +470,9 @@ export default function AdminCourses() {
       instructorEn: course.instructorEn || "",
       instructorAr: course.instructorAr || "",
       duration: course.duration?.toString() || "8",
-      thumbnailUrl: course.thumbnailUrl || "",
       requiredPlanId: course.requiredPlanId || "none",
       language: course.language || "en",
     });
-    setThumbnailPreview(course.thumbnailUrl || null);
     setEditDialogOpen(true);
   };
 
@@ -479,7 +516,21 @@ export default function AdminCourses() {
         >
           {language === "ar" ? "إدارة الدورات" : "Course Management"}
         </h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog 
+          open={dialogOpen} 
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setCreateThumbnailFile(null);
+              setCreateThumbnailPreview(null);
+              setCreateUploadProgress(0);
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
+              form.reset();
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button data-testid="button-create-course">
               <Plus className="h-4 w-4 mr-2" />
@@ -677,21 +728,21 @@ export default function AdminCourses() {
                       id="thumbnail-upload"
                       type="file"
                       accept="image/*"
-                      onChange={handleThumbnailChange}
+                      onChange={handleCreateThumbnailChange}
                       ref={fileInputRef}
                       data-testid="input-thumbnail-file"
                       className="flex-1"
                     />
-                    {thumbnailFile && (
+                    {createThumbnailFile && (
                       <Badge variant="secondary">
-                        {(thumbnailFile.size / 1024).toFixed(0)} KB
+                        {(createThumbnailFile.size / 1024).toFixed(0)} KB
                       </Badge>
                     )}
                   </div>
-                  {thumbnailPreview && (
+                  {createThumbnailPreview && (
                     <div className="mt-2">
                       <img
-                        src={thumbnailPreview}
+                        src={createThumbnailPreview}
                         alt="Thumbnail preview"
                         className="w-32 h-32 object-cover rounded-lg border"
                       />
@@ -755,21 +806,21 @@ export default function AdminCourses() {
                   )}
                 />
 
-                {uploadProgress > 0 && uploadProgress < 100 && (
+                {createUploadProgress > 0 && createUploadProgress < 100 && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
                         {language === "ar" ? "جاري الرفع..." : "Uploading..."}
                       </span>
-                      <span className="font-medium">{uploadProgress}%</span>
+                      <span className="font-medium">{createUploadProgress}%</span>
                     </div>
-                    <Progress value={uploadProgress} className="h-2" />
+                    <Progress value={createUploadProgress} className="h-2" />
                   </div>
                 )}
 
                 <Button
                   type="submit"
-                  disabled={createCourseMutation.isPending || (uploadProgress > 0 && uploadProgress < 100)}
+                  disabled={createCourseMutation.isPending || (createUploadProgress > 0 && createUploadProgress < 100)}
                   className="w-full"
                   data-testid="button-submit-course"
                 >
@@ -791,13 +842,17 @@ export default function AdminCourses() {
       <Dialog 
         open={editDialogOpen} 
         onOpenChange={(open) => {
-          setEditDialogOpen(open);
           if (!open) {
-            setThumbnailFile(null);
-            setThumbnailPreview(null);
-            setUploadProgress(0);
+            setEditThumbnailFile(null);
+            setEditThumbnailPreview(null);
+            setEditUploadProgress(0);
             setEditingCourse(null);
+            form.reset();
+            if (editFileInputRef.current) {
+              editFileInputRef.current.value = '';
+            }
           }
+          setEditDialogOpen(open);
         }}
       >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -991,20 +1046,21 @@ export default function AdminCourses() {
                     id="edit-thumbnail-upload"
                     type="file"
                     accept="image/*"
-                    onChange={handleThumbnailChange}
+                    onChange={handleEditThumbnailChange}
+                    ref={editFileInputRef}
                     data-testid="input-edit-thumbnail-file"
                     className="flex-1"
                   />
-                  {thumbnailFile && (
+                  {editThumbnailFile && (
                     <Badge variant="secondary">
-                      {(thumbnailFile.size / 1024).toFixed(0)} KB
+                      {(editThumbnailFile.size / 1024).toFixed(0)} KB
                     </Badge>
                   )}
                 </div>
-                {thumbnailPreview && (
+                {editThumbnailPreview && (
                   <div className="mt-2">
                     <img
-                      src={thumbnailPreview}
+                      src={editThumbnailPreview}
                       alt="Thumbnail preview"
                       className="w-32 h-32 object-cover rounded-lg border"
                     />
@@ -1068,21 +1124,21 @@ export default function AdminCourses() {
                 )}
               />
 
-              {uploadProgress > 0 && uploadProgress < 100 && (
+              {editUploadProgress > 0 && editUploadProgress < 100 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
                       {language === "ar" ? "جاري الرفع..." : "Uploading..."}
                     </span>
-                    <span className="font-medium">{uploadProgress}%</span>
+                    <span className="font-medium">{editUploadProgress}%</span>
                   </div>
-                  <Progress value={uploadProgress} className="h-2" />
+                  <Progress value={editUploadProgress} className="h-2" />
                 </div>
               )}
 
               <Button
                 type="submit"
-                disabled={updateCourseMutation.isPending || (uploadProgress > 0 && uploadProgress < 100)}
+                disabled={updateCourseMutation.isPending || (editUploadProgress > 0 && editUploadProgress < 100)}
                 className="w-full"
                 data-testid="button-submit-edit-course"
               >

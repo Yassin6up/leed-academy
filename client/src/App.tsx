@@ -26,6 +26,7 @@ import AdminCourses from "@/pages/admin/AdminCourses";
 import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminMeetings from "@/pages/admin/AdminMeetings";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -89,9 +90,7 @@ function Router() {
           <Route path="/admin/analytics">
             {() => (
               <AdminLayout>
-                <div className="p-8">
-                  <h1 className="text-3xl font-heading font-bold">Analytics</h1>
-                </div>
+                <AdminAnalytics />
               </AdminLayout>
             )}
           </Route>

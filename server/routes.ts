@@ -875,12 +875,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const courseData: any = {
-          ...req.body,
+          titleEn: req.body.titleEn,
+          titleAr: req.body.titleAr,
+          descriptionEn: req.body.descriptionEn || null,
+          descriptionAr: req.body.descriptionAr || null,
+          instructorEn: req.body.instructorEn || null,
+          instructorAr: req.body.instructorAr || null,
           level: req.body.level ? parseInt(req.body.level) : undefined,
-          price: req.body.price,
+          price: req.body.price || undefined,
           duration: req.body.duration ? parseInt(req.body.duration) : undefined,
           isFree: req.body.isFree === "true" || req.body.isFree === true,
           requiredPlanId: req.body.requiredPlanId === "null" || req.body.requiredPlanId === "" ? null : req.body.requiredPlanId,
+          language: req.body.language || "en",
         };
 
         if (files.thumbnail && files.thumbnail[0]) {
