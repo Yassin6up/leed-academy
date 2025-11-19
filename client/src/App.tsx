@@ -43,7 +43,7 @@ function Router() {
       {isAuthenticated && (
         <>
           <Route path="/dashboard" component={Dashboard} />
-          <Route path="/subscribe/:planId" component={Subscribe} />
+          <Route path="/subscribe/:planId?" component={Subscribe} />
 
           {/* Admin Routes */}
           <Route path="/admin">
