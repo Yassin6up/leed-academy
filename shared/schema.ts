@@ -34,6 +34,8 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { length: 20 }).notNull().default("user"),
   subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none"),
+  referralCode: varchar("referral_code", { length: 10 }).unique(),
+  referredBy: varchar("referred_by", { length: 10 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -163,6 +165,7 @@ export const progress = pgTable("progress", {
   lessonId: varchar("lesson_id").notNull().references(() => lessons.id, { onDelete: "cascade" }),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
   completed: boolean("completed").default(false),
+  watchProgress: integer("watch_progress").default(0),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -185,6 +188,7 @@ export const meetings = pgTable("meetings", {
   scheduledAt: timestamp("scheduled_at").notNull(),
   zoomLink: varchar("zoom_link").notNull(),
   duration: integer("duration").notNull(),
+  isPaidOnly: boolean("is_paid_only").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -25,6 +25,7 @@ export function Header() {
     { path: "/about", label: t("nav.about") },
     { path: "/services", label: t("nav.services") },
     { path: "/courses", label: t("nav.courses") },
+    { path: "/news", label: language === "ar" ? "الأخبار" : "News" },
     { path: "/pricing", label: t("nav.pricing") },
     { path: "/contact", label: t("nav.contact") },
   ];

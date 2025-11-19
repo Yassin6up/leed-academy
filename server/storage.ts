@@ -34,9 +34,11 @@ export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByReferralCode(code: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
+  getReferralCount(userId: string): Promise<number>;
   
   // Course methods
   getCourse(id: string): Promise<Course | undefined>;
@@ -100,6 +102,11 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getUserByReferralCode(code: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.referralCode, code)).limit(1);
+    return result[0];
+  }
+
   async upsertUser(user: UpsertUser): Promise<User> {
     const existing = user.email ? await this.getUserByEmail(user.email) : null;
     
@@ -127,6 +134,18 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return updated;
+  }
+
+  async getReferralCount(userId: string): Promise<number> {
+    const result = await db.select().from(users).where(eq(users.referredBy, users.referralCode));
+    const user = await this.getUser(userId);
+    if (!user?.referralCode) return 0;
+    
+    const referrals = await db
+      .select()
+      .from(users)
+      .where(eq(users.referredBy, user.referralCode));
+    return referrals.length;
   }
 
   // Course methods

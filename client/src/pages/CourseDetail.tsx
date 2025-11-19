@@ -13,17 +13,21 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Clock, BookOpen, Lock, Play, CheckCircle2, Calendar } from "lucide-react";
+import { Clock, BookOpen, Lock, Play, CheckCircle2, Calendar, ChevronRight } from "lucide-react";
 import type { Course, Lesson, Progress as UserProgress, Meeting } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useState, useRef, useEffect } from "react";
 
 export default function CourseDetail() {
   const [, params] = useRoute("/course/:id");
   const { t, language } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [lastProgressUpdate, setLastProgressUpdate] = useState(0);
 
   const { data: course } = useQuery<Course>({
     queryKey: ["/api/courses", params?.id],
@@ -45,22 +49,62 @@ export default function CourseDetail() {
     enabled: !!params?.id,
   });
 
-  const markCompleteMutation = useMutation({
-    mutationFn: async (lessonId: string) => {
-      return await apiRequest("POST", "/api/progress", {
-        lessonId,
-        courseId: params?.id,
-        completed: true,
+  const updateWatchProgressMutation = useMutation({
+    mutationFn: async ({ lessonId, watchProgress, courseId }: { lessonId: string; watchProgress: number; courseId: string }) => {
+      return await apiRequest("PATCH", `/api/progress/${lessonId}/watch`, {
+        watchProgress,
+        courseId,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/progress", params?.id] });
-      toast({
-        title: t("common.success"),
-        description: language === "ar" ? "تم تحديد الدرس كمكتمل" : "Lesson marked as complete",
-      });
     },
   });
+
+  // Video player event handlers
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !lessons || !isAuthenticated) return;
+
+    const currentLesson = lessons[currentLessonIndex];
+    if (!currentLesson) return;
+
+    const handleTimeUpdate = () => {
+      const currentTime = Math.floor(video.currentTime);
+      
+      // Update progress every 5 seconds
+      if (currentTime > 0 && currentTime - lastProgressUpdate >= 5) {
+        setLastProgressUpdate(currentTime);
+        updateWatchProgressMutation.mutate({
+          lessonId: currentLesson.id,
+          watchProgress: currentTime,
+          courseId: params?.id!,
+        });
+      }
+    };
+
+    const handleEnded = () => {
+      // Video completed - mark as completed
+      updateWatchProgressMutation.mutate({
+        lessonId: currentLesson.id,
+        watchProgress: currentLesson.duration || 0,
+        courseId: params?.id!,
+      });
+      
+      toast({
+        title: t("common.success"),
+        description: language === "ar" ? "تم إكمال الدرس!" : "Lesson completed!",
+      });
+    };
+
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("ended", handleEnded);
+
+    return () => {
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("ended", handleEnded);
+    };
+  }, [currentLessonIndex, lessons, isAuthenticated, lastProgressUpdate, params?.id, language, toast, t, updateWatchProgressMutation]);
 
   if (!course || !lessons) {
     return (
@@ -203,72 +247,118 @@ export default function CourseDetail() {
         <section className="py-12">
           <div className="container mx-auto px-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Curriculum */}
+              {/* Video Player & Current Lesson */}
               <div className="lg:col-span-2">
-                <h2 className="text-2xl font-heading font-bold text-foreground mb-6">
-                  {language === "ar" ? "المنهج الدراسي" : "Curriculum"}
-                </h2>
-                <Accordion type="single" collapsible className="space-y-4">
-                  {lessons.map((lesson, index) => {
-                    const isCompleted = userProgress?.some(
-                      (p) => p.lessonId === lesson.id && p.completed
-                    );
-                    const isAccessible = isLessonAccessible(lesson, index);
-
-                    return (
-                      <AccordionItem
-                        key={lesson.id}
-                        value={lesson.id}
-                        className="border rounded-lg px-4"
-                      >
-                        <AccordionTrigger
-                          className="hover:no-underline"
-                          data-testid={`accordion-lesson-${index}`}
+                {isAuthenticated && !isLocked ? (
+                  <>
+                    <Card className="mb-6">
+                      <CardContent className="p-0">
+                        <video
+                          ref={videoRef}
+                          className="w-full aspect-video bg-black rounded-t-lg"
+                          controls
+                          src={lessons[currentLessonIndex]?.videoUrl}
+                          data-testid="video-player"
                         >
-                          <div className="flex items-center gap-3 w-full">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted flex-shrink-0">
-                              {isCompleted ? (
-                                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                              ) : !isAccessible ? (
-                                <Lock className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <Play className="h-4 w-4 text-primary" />
-                              )}
+                          {language === "ar" ? "متصفحك لا يدعم تشغيل الفيديو" : "Your browser does not support the video tag."}
+                        </video>
+                        <div className="p-6">
+                          <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
+                            {language === "ar" ? lessons[currentLessonIndex]?.titleAr : lessons[currentLessonIndex]?.titleEn}
+                          </h2>
+                          <p className="text-muted-foreground mb-4">
+                            {language === "ar" ? lessons[currentLessonIndex]?.descriptionAr : lessons[currentLessonIndex]?.descriptionEn}
+                          </p>
+                          <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4" />
+                              <span>{lessons[currentLessonIndex]?.duration} {language === "ar" ? "دقيقة" : "min"}</span>
                             </div>
-                            <div className="flex-1 text-left">
-                              <p className="font-medium text-foreground">
-                                {language === "ar" ? lesson.titleAr : lesson.titleEn}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {lesson.duration} {language === "ar" ? "دقيقة" : "min"}
-                              </p>
-                            </div>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="pt-4 space-y-4">
-                            <p className="text-muted-foreground">
-                              {language === "ar"
-                                ? lesson.descriptionAr
-                                : lesson.descriptionEn}
-                            </p>
-                            {isAccessible && !isCompleted && (
+                            {currentLessonIndex < lessons.length - 1 && (
                               <Button
-                                onClick={() => markCompleteMutation.mutate(lesson.id)}
-                                disabled={markCompleteMutation.isPending}
-                                data-testid={`button-complete-lesson-${index}`}
+                                onClick={() => setCurrentLessonIndex(currentLessonIndex + 1)}
+                                disabled={!isLessonAccessible(lessons[currentLessonIndex + 1], currentLessonIndex + 1)}
+                                data-testid="button-next-lesson"
                               >
-                                {language === "ar"
-                                  ? "تحديد كمكتمل"
-                                  : "Mark as Complete"}
+                                {language === "ar" ? "الدرس التالي" : "Next Lesson"}
+                                <ChevronRight className="h-4 w-4 ml-2" />
                               </Button>
                             )}
                           </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Lessons List */}
+                    <h2 className="text-xl font-heading font-bold text-foreground mb-4">
+                      {language === "ar" ? "قائمة الدروس" : "Lessons"}
+                    </h2>
+                    <div className="space-y-2">
+                      {lessons.map((lesson, index) => {
+                        const isCompleted = userProgress?.some(
+                          (p) => p.lessonId === lesson.id && p.completed
+                        );
+                        const isAccessible = isLessonAccessible(lesson, index);
+                        const isCurrent = index === currentLessonIndex;
+
+                        return (
+                          <Card
+                            key={lesson.id}
+                            className={isCurrent ? "border-primary bg-primary/5" : ""}
+                            data-testid={`card-lesson-${index}`}
+                          >
+                            <CardContent className="p-4">
+                              <button
+                                onClick={() => isAccessible && setCurrentLessonIndex(index)}
+                                disabled={!isAccessible}
+                                className="w-full flex items-center gap-3 text-left disabled:cursor-not-allowed"
+                                data-testid={`button-select-lesson-${index}`}
+                              >
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted flex-shrink-0">
+                                  {isCompleted ? (
+                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                  ) : !isAccessible ? (
+                                    <Lock className="h-5 w-5 text-muted-foreground" />
+                                  ) : (
+                                    <Play className="h-5 w-5 text-primary" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <p className={`font-medium ${isAccessible ? "text-foreground" : "text-muted-foreground"}`}>
+                                    {language === "ar" ? lesson.titleAr : lesson.titleEn}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {lesson.duration} {language === "ar" ? "دقيقة" : "min"}
+                                    {!isAccessible && lesson.requiresPrevious && (
+                                      <span className="mx-2">• {language === "ar" ? "مقفل - أكمل الدرس السابق أولاً" : "Locked - Complete previous lesson first"}</span>
+                                    )}
+                                  </p>
+                                </div>
+                              </button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <Lock className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
+                        {language === "ar" ? "هذه الدورة محظورة" : "This Course is Locked"}
+                      </h2>
+                      <p className="text-muted-foreground mb-6">
+                        {language === "ar"
+                          ? "اشترك في خطة للوصول إلى جميع الدروس والمحتوى"
+                          : "Subscribe to a plan to access all lessons and content"}
+                      </p>
+                      <Button asChild>
+                        <a href="/pricing" data-testid="button-pricing">{language === "ar" ? "عرض الخطط" : "View Plans"}</a>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               {/* Upcoming Meetings */}
@@ -294,7 +384,7 @@ export default function CourseDetail() {
                                   language === "ar" ? "ar" : "en"
                                 )}
                               </p>
-                              {!isLocked && (
+                              {(!meeting.isPaidOnly || !isLocked) && (
                                 <Button
                                   asChild
                                   variant="outline"
@@ -309,6 +399,12 @@ export default function CourseDetail() {
                                     {language === "ar" ? "انضم الآن" : "Join Now"}
                                   </a>
                                 </Button>
+                              )}
+                              {meeting.isPaidOnly && isLocked && (
+                                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
+                                  <Lock className="h-3 w-3" />
+                                  <span>{language === "ar" ? "يتطلب اشتراكاً" : "Subscription Required"}</span>
+                                </div>
                               )}
                             </div>
                           </div>

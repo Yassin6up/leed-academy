@@ -14,6 +14,7 @@ import Contact from "@/pages/Contact";
 import Pricing from "@/pages/Pricing";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
+import News from "@/pages/News";
 import Dashboard from "@/pages/Dashboard";
 import Subscribe from "@/pages/Subscribe";
 import AdminLayout from "@/pages/admin/AdminLayout";
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/courses" component={Courses} />
       <Route path="/course/:id" component={CourseDetail} />
+      <Route path="/news" component={News} />
 
       {/* Protected Routes */}
       {isAuthenticated && (

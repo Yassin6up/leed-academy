@@ -76,6 +76,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Validate referral code
+  app.get("/api/referral/validate/:code", async (req, res) => {
+    try {
+      const user = await storage.getUserByReferralCode(req.params.code);
+      if (user) {
+        res.json({ valid: true, referrerName: `${user.firstName} ${user.lastName}` });
+      } else {
+        res.json({ valid: false });
+      }
+    } catch (error) {
+      console.error("Error validating referral code:", error);
+      res.status(500).json({ message: "Failed to validate referral code" });
+    }
+  });
+
+  // Get referral statistics (for current user)
+  app.get("/api/referral/stats", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const user = await storage.getUser(userId);
+      const referralCount = await storage.getReferralCount(userId);
+      res.json({
+        referralCode: user?.referralCode,
+        totalReferrals: referralCount,
+      });
+    } catch (error) {
+      console.error("Error fetching referral stats:", error);
+      res.status(500).json({ message: "Failed to fetch referral stats" });
+    }
+  });
+
   // Serve uploaded files with authentication
   app.use("/uploads", isAuthenticated, express.static(uploadDir));
 
@@ -100,7 +131,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/courses/:id/meetings", async (req, res) => {
     const meetings = await storage.getCourseMeetings(req.params.id);
-    res.json(meetings);
+    const isAuth = req.isAuthenticated();
+    const userId = isAuth ? (req.user as any)?.claims?.sub : null;
+    const user = userId ? await storage.getUser(userId) : null;
+    const hasActiveSubscription = user?.subscriptionStatus === "active";
+    
+    // Sanitize meetings - remove Zoom links for unauthorized users
+    const sanitizedMeetings = meetings.map(meeting => {
+      const canAccess = !meeting.isPaidOnly || (isAuth && hasActiveSubscription);
+      
+      if (canAccess) {
+        return meeting;
+      } else {
+        // Remove Zoom link for unauthorized users
+        const { zoomLink, ...sanitizedMeeting } = meeting;
+        return sanitizedMeeting;
+      }
+    });
+    
+    res.json(sanitizedMeetings);
   });
 
   app.get("/api/subscription-plans", async (_req, res) => {
@@ -119,6 +168,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/testimonials", async (_req, res) => {
     const testimonials = await storage.getAllTestimonials();
     res.json(testimonials);
+  });
+
+  // Get all upcoming meetings (for News page)
+  // Returns sanitized meetings - Zoom links only visible to authenticated users with active subscriptions
+  app.get("/api/meetings", async (req, res) => {
+    const meetings = await storage.getAllMeetings();
+    const isAuth = req.isAuthenticated();
+    const userId = isAuth ? (req.user as any)?.claims?.sub : null;
+    const user = userId ? await storage.getUser(userId) : null;
+    const hasActiveSubscription = user?.subscriptionStatus === "active";
+    
+    // Sanitize meetings - remove Zoom links for unauthorized users
+    const sanitizedMeetings = meetings.map(meeting => {
+      const canAccess = !meeting.isPaidOnly || (isAuth && hasActiveSubscription);
+      
+      if (canAccess) {
+        return meeting;
+      } else {
+        // Remove Zoom link for unauthorized users
+        const { zoomLink, ...sanitizedMeeting } = meeting;
+        return sanitizedMeeting;
+      }
+    });
+    
+    res.json(sanitizedMeetings);
   });
 
   // Crypto prices from Binance API
@@ -177,6 +251,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const progress = await storage.upsertProgress(validated);
+      res.json(progress);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Update watch progress (for sequential video tracking)
+  app.patch("/api/progress/:lessonId/watch", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { lessonId } = req.params;
+      const { watchProgress, courseId } = req.body;
+      
+      // Get lesson to check duration
+      const lesson = await storage.getLesson(lessonId);
+      if (!lesson) {
+        return res.status(404).json({ message: "Lesson not found" });
+      }
+      
+      // Calculate if video is completed (watched at least 95% of duration)
+      const completed = lesson.duration ? watchProgress >= (lesson.duration * 0.95) : false;
+      
+      const progressData = {
+        userId,
+        lessonId,
+        courseId: courseId || lesson.courseId,
+        completed,
+        watchProgress,
+        completedAt: completed ? new Date() : undefined,
+      };
+      
+      const progress = await storage.upsertProgress(progressData);
       res.json(progress);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

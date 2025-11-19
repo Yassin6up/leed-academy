@@ -50,13 +50,36 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
-async function upsertUser(claims: any) {
+function generateReferralCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+async function upsertUser(claims: any, referredByCode?: string) {
+  const existingUser = await storage.getUserByEmail(claims["email"]);
+  
+  let referralCode = existingUser?.referralCode;
+  if (!referralCode) {
+    let isUnique = false;
+    while (!isUnique) {
+      referralCode = generateReferralCode();
+      const existing = await storage.getUserByReferralCode(referralCode);
+      if (!existing) isUnique = true;
+    }
+  }
+
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    referralCode,
+    referredBy: existingUser ? existingUser.referredBy : (referredByCode || null),
   });
 }
 
