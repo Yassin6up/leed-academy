@@ -225,6 +225,31 @@ export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type Testimonial = typeof testimonials.$inferSelect;
 
+// Payment Settings (Admin configurable)
+export const paymentSettings = pgTable("payment_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bankName: varchar("bank_name"),
+  accountNumber: varchar("account_number"),
+  accountHolderName: varchar("account_holder_name"),
+  iban: varchar("iban"),
+  swiftCode: varchar("swift_code"),
+  bankAddress: text("bank_address"),
+  btcAddress: varchar("btc_address"),
+  ethAddress: varchar("eth_address"),
+  usdtAddress: varchar("usdt_address"),
+  usdtNetwork: varchar("usdt_network").default("TRC20"),
+  paymentInstructionsEn: text("payment_instructions_en"),
+  paymentInstructionsAr: text("payment_instructions_ar"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPaymentSettingsSchema = createInsertSchema(paymentSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertPaymentSettings = z.infer<typeof insertPaymentSettingsSchema>;
+export type PaymentSettings = typeof paymentSettings.$inferSelect;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   subscriptions: many(subscriptions),

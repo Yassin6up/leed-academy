@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Wallet, Building2, Upload, CheckCircle2 } from "lucide-react";
-import type { SubscriptionPlan } from "@shared/schema";
+import type { SubscriptionPlan, PaymentSettings } from "@shared/schema";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -41,6 +41,11 @@ export default function Subscribe() {
   const { data: plan } = useQuery<SubscriptionPlan>({
     queryKey: ["/api/subscription-plans", params?.planId],
     enabled: !!params?.planId && isAuthenticated,
+  });
+
+  const { data: paymentSettings } = useQuery<PaymentSettings>({
+    queryKey: ["/api/payment-settings"],
+    enabled: isAuthenticated,
   });
 
   const submitPaymentMutation = useMutation({
@@ -213,17 +218,195 @@ export default function Subscribe() {
                         </div>
                       </RadioGroup>
 
-                      {paymentMethod === "crypto" && (
-                        <div className="bg-muted/30 p-4 rounded-lg">
-                          <Label className="text-sm font-medium text-foreground mb-2 block">
-                            {language === "ar" ? "عنوان المحفظة" : "Wallet Address"}
-                          </Label>
-                          <Input
-                            name="walletAddress"
-                            placeholder="0x..."
-                            required
-                            data-testid="input-wallet-address"
-                          />
+                      {paymentMethod === "crypto" && paymentSettings && (
+                        <div className="space-y-4">
+                          <div className="bg-primary/5 border border-primary/20 p-6 rounded-lg space-y-4">
+                            <h3 className="font-semibold text-foreground mb-4">
+                              {language === "ar" ? "عناوين المحافظ" : "Wallet Addresses"}
+                            </h3>
+                            
+                            {paymentSettings.btcAddress && (
+                              <div>
+                                <Label className="text-sm font-medium text-foreground">Bitcoin (BTC)</Label>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <code className="flex-1 bg-background/50 px-3 py-2 rounded text-sm border">
+                                    {paymentSettings.btcAddress}
+                                  </code>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(paymentSettings.btcAddress || "");
+                                      toast({ title: language === "ar" ? "تم النسخ" : "Copied" });
+                                    }}
+                                    data-testid="button-copy-btc"
+                                  >
+                                    {language === "ar" ? "نسخ" : "Copy"}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {paymentSettings.ethAddress && (
+                              <div>
+                                <Label className="text-sm font-medium text-foreground">Ethereum (ETH)</Label>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <code className="flex-1 bg-background/50 px-3 py-2 rounded text-sm border">
+                                    {paymentSettings.ethAddress}
+                                  </code>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(paymentSettings.ethAddress || "");
+                                      toast({ title: language === "ar" ? "تم النسخ" : "Copied" });
+                                    }}
+                                    data-testid="button-copy-eth"
+                                  >
+                                    {language === "ar" ? "نسخ" : "Copy"}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {paymentSettings.usdtAddress && (
+                              <div>
+                                <Label className="text-sm font-medium text-foreground">
+                                  USDT ({paymentSettings.usdtNetwork || "TRC20"})
+                                </Label>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <code className="flex-1 bg-background/50 px-3 py-2 rounded text-sm border">
+                                    {paymentSettings.usdtAddress}
+                                  </code>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(paymentSettings.usdtAddress || "");
+                                      toast({ title: language === "ar" ? "تم النسخ" : "Copied" });
+                                    }}
+                                    data-testid="button-copy-usdt"
+                                  >
+                                    {language === "ar" ? "نسخ" : "Copy"}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {paymentSettings.paymentInstructionsEn && (
+                              <div className="mt-4 pt-4 border-t border-border">
+                                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                  {language === "ar" 
+                                    ? paymentSettings.paymentInstructionsAr 
+                                    : paymentSettings.paymentInstructionsEn}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="bg-muted/30 p-4 rounded-lg">
+                            <Label className="text-sm font-medium text-foreground mb-2 block">
+                              {language === "ar" ? "عنوان المحفظة التي أرسلت منها" : "Your Wallet Address (Sender)"}
+                            </Label>
+                            <Input
+                              name="walletAddress"
+                              placeholder="0x..."
+                              required
+                              data-testid="input-wallet-address"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {language === "ar" 
+                                ? "أدخل عنوان محفظتك التي أرسلت منها الدفع للتحقق"
+                                : "Enter your wallet address used for payment verification"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {paymentMethod === "bank" && paymentSettings && (
+                        <div className="bg-primary/5 border border-primary/20 p-6 rounded-lg space-y-4">
+                          <h3 className="font-semibold text-foreground mb-4">
+                            {language === "ar" ? "معلومات الحساب البنكي" : "Bank Account Information"}
+                          </h3>
+
+                          {paymentSettings.bankName && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">
+                                {language === "ar" ? "اسم البنك" : "Bank Name"}
+                              </Label>
+                              <p className="text-foreground font-medium">{paymentSettings.bankName}</p>
+                            </div>
+                          )}
+
+                          {paymentSettings.accountHolderName && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">
+                                {language === "ar" ? "اسم صاحب الحساب" : "Account Holder"}
+                              </Label>
+                              <p className="text-foreground font-medium">{paymentSettings.accountHolderName}</p>
+                            </div>
+                          )}
+
+                          {paymentSettings.accountNumber && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">
+                                {language === "ar" ? "رقم الحساب" : "Account Number"}
+                              </Label>
+                              <p className="text-foreground font-medium">{paymentSettings.accountNumber}</p>
+                            </div>
+                          )}
+
+                          {paymentSettings.iban && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">IBAN</Label>
+                              <div className="flex items-center gap-2">
+                                <code className="flex-1 bg-background/50 px-3 py-2 rounded text-sm border">
+                                  {paymentSettings.iban}
+                                </code>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(paymentSettings.iban || "");
+                                    toast({ title: language === "ar" ? "تم النسخ" : "Copied" });
+                                  }}
+                                  data-testid="button-copy-iban"
+                                >
+                                  {language === "ar" ? "نسخ" : "Copy"}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {paymentSettings.swiftCode && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">SWIFT/BIC</Label>
+                              <p className="text-foreground font-medium">{paymentSettings.swiftCode}</p>
+                            </div>
+                          )}
+
+                          {paymentSettings.bankAddress && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">
+                                {language === "ar" ? "عنوان البنك" : "Bank Address"}
+                              </Label>
+                              <p className="text-foreground text-sm">{paymentSettings.bankAddress}</p>
+                            </div>
+                          )}
+
+                          {paymentSettings.paymentInstructionsEn && (
+                            <div className="mt-4 pt-4 border-t border-border">
+                              <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                {language === "ar" 
+                                  ? paymentSettings.paymentInstructionsAr 
+                                  : paymentSettings.paymentInstructionsEn}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
 

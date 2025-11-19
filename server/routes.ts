@@ -420,6 +420,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment Settings routes
+  app.get("/api/payment-settings", async (_req, res) => {
+    try {
+      const settings = await storage.getPaymentSettings();
+      res.json(settings || {});
+    } catch (error) {
+      console.error("Error fetching payment settings:", error);
+      res.status(500).json({ message: "Failed to fetch payment settings" });
+    }
+  });
+
+  app.post("/api/admin/payment-settings", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const settings = await storage.upsertPaymentSettings(req.body);
+      res.json(settings);
+    } catch (error: any) {
+      console.error("Error updating payment settings:", error);
+      res.status(500).json({ message: error.message || "Failed to update payment settings" });
+    }
+  });
+
   app.get("/api/admin/users", isAuthenticated, requireAdmin, async (_req, res) => {
     const users = await storage.getAllUsers();
     res.json(users);

@@ -22,6 +22,7 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminCourses from "@/pages/admin/AdminCourses";
 import AdminPayments from "@/pages/admin/AdminPayments";
+import AdminSettings from "@/pages/admin/AdminSettings";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -94,9 +95,7 @@ function Router() {
           <Route path="/admin/settings">
             {() => (
               <AdminLayout>
-                <div className="p-8">
-                  <h1 className="text-3xl font-heading font-bold">Settings</h1>
-                </div>
+                <AdminSettings />
               </AdminLayout>
             )}
           </Route>

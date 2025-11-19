@@ -9,6 +9,7 @@ import {
   progress,
   meetings,
   testimonials,
+  paymentSettings,
   type User,
   type UpsertUser,
   type Course,
@@ -27,6 +28,8 @@ import {
   type InsertMeeting,
   type Testimonial,
   type InsertTestimonial,
+  type PaymentSettings,
+  type InsertPaymentSettings,
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -104,6 +107,10 @@ export interface IStorage {
     topCourses: Array<{ id: string; titleEn: string; titleAr: string; enrollments: number }>;
     paymentStatusBreakdown: { pending: number; approved: number; rejected: number };
   }>;
+  
+  // Payment Settings methods
+  getPaymentSettings(): Promise<PaymentSettings | undefined>;
+  upsertPaymentSettings(settings: InsertPaymentSettings): Promise<PaymentSettings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -561,6 +568,28 @@ export class DatabaseStorage implements IStorage {
       topCourses,
       paymentStatusBreakdown,
     };
+  }
+  
+  // Payment Settings methods
+  async getPaymentSettings(): Promise<PaymentSettings | undefined> {
+    const result = await db.select().from(paymentSettings).limit(1);
+    return result[0];
+  }
+  
+  async upsertPaymentSettings(settings: InsertPaymentSettings): Promise<PaymentSettings> {
+    const existing = await this.getPaymentSettings();
+    
+    if (existing) {
+      const [updated] = await db
+        .update(paymentSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(paymentSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    const [newSettings] = await db.insert(paymentSettings).values(settings).returning();
+    return newSettings;
   }
 }
 
