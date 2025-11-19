@@ -446,6 +446,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/admin/lessons/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteLesson(req.params.id);
+      res.json({ message: "Lesson deleted" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   app.get("/api/admin/payments", isAuthenticated, requireAdmin, async (_req, res) => {
     const payments = await storage.getAllPayments();
     res.json(payments);

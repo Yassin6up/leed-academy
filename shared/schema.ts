@@ -111,6 +111,10 @@ export const lessons = pgTable("lessons", {
 export const insertLessonSchema = createInsertSchema(lessons).omit({
   id: true,
   createdAt: true,
+}).extend({
+  videoUrl: z.string().url("Must be a valid URL").min(1, "Video URL is required"),
+  titleEn: z.string().min(1, "English title is required"),
+  titleAr: z.string().min(1, "Arabic title is required"),
 });
 export type InsertLesson = z.infer<typeof insertLessonSchema>;
 export type Lesson = typeof lessons.$inferSelect;
