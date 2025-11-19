@@ -41,11 +41,9 @@ export function Hero() {
               className="text-base px-8"
               data-testid="button-hero-primary"
             >
-              <Link href="/courses">
-                <a className="flex items-center gap-2">
-                  {t("hero.cta.primary")}
-                  <ArrowRight className="h-5 w-5" />
-                </a>
+              <Link href="/courses" className="flex items-center gap-2">
+                {t("hero.cta.primary")}
+                <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>
             <Button
@@ -55,11 +53,9 @@ export function Hero() {
               className="text-base px-8 backdrop-blur-sm bg-background/50"
               data-testid="button-hero-secondary"
             >
-              <Link href="/about">
-                <a className="flex items-center gap-2">
-                  <Play className="h-5 w-5" />
-                  {t("hero.cta.secondary")}
-                </a>
+              <Link href="/about" className="flex items-center gap-2">
+                <Play className="h-5 w-5" />
+                {t("hero.cta.secondary")}
               </Link>
             </Button>
           </div>

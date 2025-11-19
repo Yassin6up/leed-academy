@@ -36,29 +36,28 @@ export function Header() {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link href="/">
-            <a
-              className="text-2xl font-heading font-bold text-primary hover-elevate active-elevate-2 px-3 py-2 rounded-lg transition-colors"
-              data-testid="link-home-logo"
-            >
-              TradeMaster
-            </a>
+          <Link 
+            href="/"
+            className="text-2xl font-heading font-bold text-primary hover-elevate active-elevate-2 px-3 py-2 rounded-lg transition-colors"
+            data-testid="link-home-logo"
+          >
+            TradeMaster
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
             {navItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <a
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${
-                    isActive(item.path)
-                      ? "text-foreground bg-accent"
-                      : "text-muted-foreground"
-                  }`}
-                  data-testid={`link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  {item.label}
-                </a>
+              <Link 
+                key={item.path} 
+                href={item.path}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${
+                  isActive(item.path)
+                    ? "text-foreground bg-accent"
+                    : "text-muted-foreground"
+                }`}
+                data-testid={`link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                {item.label}
               </Link>
             ))}
           </nav>
@@ -125,17 +124,17 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <Link href="/dashboard">
-                    <DropdownMenuItem data-testid="link-dashboard">
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard" data-testid="link-dashboard">
                       {t("nav.dashboard")}
-                    </DropdownMenuItem>
-                  </Link>
-                  {isAdmin && (
-                    <Link href="/admin">
-                      <DropdownMenuItem data-testid="link-admin">
-                        {t("nav.admin")}
-                      </DropdownMenuItem>
                     </Link>
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" data-testid="link-admin">
+                        {t("nav.admin")}
+                      </Link>
+                    </DropdownMenuItem>
                   )}
                   <DropdownMenuItem asChild>
                     <a href="/api/logout" data-testid="link-logout">
@@ -172,18 +171,18 @@ export function Header() {
           <nav className="lg:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-2">
               {navItems.map((item) => (
-                <Link key={item.path} href={item.path}>
-                  <a
-                    className={`block px-4 py-3 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${
-                      isActive(item.path)
-                        ? "text-foreground bg-accent"
-                        : "text-muted-foreground"
-                    }`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    data-testid={`mobile-link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    {item.label}
-                  </a>
+                <Link 
+                  key={item.path} 
+                  href={item.path}
+                  className={`block px-4 py-3 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${
+                    isActive(item.path)
+                      ? "text-foreground bg-accent"
+                      : "text-muted-foreground"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-testid={`mobile-link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  {item.label}
                 </Link>
               ))}
             </div>

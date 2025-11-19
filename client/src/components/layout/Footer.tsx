@@ -29,24 +29,30 @@ export function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/about">
-                  <a className="text-muted-foreground hover:text-primary transition-colors text-sm" data-testid="footer-link-about">
-                    {t("nav.about")}
-                  </a>
+                <Link 
+                  href="/about" 
+                  className="text-muted-foreground hover:text-primary transition-colors text-sm" 
+                  data-testid="footer-link-about"
+                >
+                  {t("nav.about")}
                 </Link>
               </li>
               <li>
-                <Link href="/courses">
-                  <a className="text-muted-foreground hover:text-primary transition-colors text-sm" data-testid="footer-link-courses">
-                    {t("nav.courses")}
-                  </a>
+                <Link 
+                  href="/courses" 
+                  className="text-muted-foreground hover:text-primary transition-colors text-sm" 
+                  data-testid="footer-link-courses"
+                >
+                  {t("nav.courses")}
                 </Link>
               </li>
               <li>
-                <Link href="/pricing">
-                  <a className="text-muted-foreground hover:text-primary transition-colors text-sm" data-testid="footer-link-pricing">
-                    {t("nav.pricing")}
-                  </a>
+                <Link 
+                  href="/pricing" 
+                  className="text-muted-foreground hover:text-primary transition-colors text-sm" 
+                  data-testid="footer-link-pricing"
+                >
+                  {t("nav.pricing")}
                 </Link>
               </li>
             </ul>
@@ -59,10 +65,12 @@ export function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/contact">
-                  <a className="text-muted-foreground hover:text-primary transition-colors text-sm" data-testid="footer-link-contact">
-                    {t("nav.contact")}
-                  </a>
+                <Link 
+                  href="/contact" 
+                  className="text-muted-foreground hover:text-primary transition-colors text-sm" 
+                  data-testid="footer-link-contact"
+                >
+                  {t("nav.contact")}
                 </Link>
               </li>
               <li>
