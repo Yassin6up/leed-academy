@@ -19,8 +19,9 @@ import {
   PlayCircle,
   CheckCircle2,
   Lock,
+  Crown,
 } from "lucide-react";
-import type { Course, Lesson } from "@shared/schema";
+import type { Course, Lesson, SubscriptionPlan } from "@shared/schema";
 import { format } from "date-fns";
 
 export default function CoursePreview() {
@@ -37,6 +38,11 @@ export default function CoursePreview() {
   const { data: lessons = [] } = useQuery<Lesson[]>({
     queryKey: [`/api/courses/${id}/lessons`],
     enabled: !!id,
+  });
+
+  const { data: plan } = useQuery<SubscriptionPlan>({
+    queryKey: [`/api/subscription-plans/${course?.requiredPlanId}`],
+    enabled: !!course?.requiredPlanId,
   });
 
   useEffect(() => {
@@ -199,7 +205,12 @@ export default function CoursePreview() {
                     </Badge>
                   )}
 
-                  {course.isFree && (
+                  {course.requiredPlanId && plan ? (
+                    <Badge variant="default" className="gap-2">
+                      <Crown className="h-3 w-3" />
+                      {language === "ar" ? plan.nameAr : plan.nameEn}
+                    </Badge>
+                  ) : (
                     <Badge variant="default">{language === "ar" ? "مجاني" : "Free"}</Badge>
                   )}
 
@@ -246,11 +257,23 @@ export default function CoursePreview() {
                     </div>
 
                     <div className="p-6 space-y-4">
-                      {/* Price */}
-                      {!course.isFree && (
-                        <div className="text-3xl font-bold text-foreground">
-                          ${course.price}
+                      {/* Plan Name or Free Badge */}
+                      {course.requiredPlanId && plan ? (
+                        <div className="flex items-center gap-2">
+                          <Crown className="h-6 w-6 text-primary" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              {language === "ar" ? "يتطلب خطة" : "Requires Plan"}
+                            </p>
+                            <p className="text-xl font-bold text-foreground">
+                              {language === "ar" ? plan.nameAr : plan.nameEn}
+                            </p>
+                          </div>
                         </div>
+                      ) : (
+                        <Badge variant="default" className="text-lg px-4 py-2 w-full justify-center">
+                          {language === "ar" ? "مجاني" : "Free"}
+                        </Badge>
                       )}
 
                       {/* Start Course Button */}
