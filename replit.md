@@ -104,10 +104,18 @@ Preferred communication style: Simple, everyday language.
 - Drizzle Kit for schema migrations
 
 **File Storage**
-- Local filesystem storage for uploaded files (payment proofs, course materials)
+- Local filesystem storage for uploaded files (payment proofs, course thumbnails, lesson videos)
 - Multer for multipart form data handling
-- File type validation (jpg, jpeg, png, pdf only)
-- UUID-based unique filenames for security
+- File type validation:
+  - Course thumbnails: JPEG, PNG, WebP only (max 5MB)
+  - Lesson videos: MP4, WebM, MOV only (max 2GB)
+  - Payment proofs: JPEG, PNG, PDF only (max 10MB)
+- Timestamp-based unique filenames with slugs for better organization
+- Directory structure:
+  - uploads/courses/{courseId}/thumbnails/ - Course thumbnail images
+  - uploads/courses/{courseId}/videos/{lessonId}/ - Lesson video files
+  - uploads/ - Payment proof files
+- Automatic cleanup on errors (files deleted if database operation fails)
 
 **UI Components**
 - Radix UI primitives for accessible component foundations

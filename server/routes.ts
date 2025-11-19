@@ -659,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const courseData = {
           ...req.body,
           level: parseInt(req.body.level),
-          price: parseFloat(req.body.price),
+          price: req.body.price, // Keep as string for decimal field
           duration: parseInt(req.body.duration),
           isFree: req.body.isFree === "true" || req.body.isFree === true,
           requiredPlanId: req.body.requiredPlanId || null,
@@ -730,14 +730,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/lessons", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const validated = insertLessonSchema.parse(req.body);
-      const lesson = await storage.createLesson(validated);
-      res.json(lesson);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
+  // Configure multer for lesson video uploads
+  const lessonUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => {
+        const tempDir = path.join(process.cwd(), "uploads", "temp");
+        ensureDir(tempDir);
+        cb(null, tempDir);
+      },
+      filename: (_req, file, cb) => {
+        const uniqueName = generateUniqueFilename(file.originalname, "video");
+        cb(null, uniqueName);
+      },
+    }),
+    limits: {
+      fileSize: MAX_VIDEO_SIZE, // Max 2GB
+    },
+    fileFilter: (_req, file, cb) => {
+      if (!validateMimeType(file.mimetype, ALLOWED_VIDEO_TYPES)) {
+        return cb(new Error("Invalid video format. Only MP4, WebM, and MOV are allowed."));
+      }
+      cb(null, true);
+    },
+  });
+
+  app.post("/api/admin/lessons", isAuthenticated, requireAdmin, (req, res) => {
+    lessonUpload.single("video")(req, res, async (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "Video size exceeds 2GB limit" });
+        }
+        return res.status(400).json({ message: `Upload error: ${err.message}` });
+      }
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+
+      const videoFile = req.file;
+      let uploadedFilePath: string | null = null;
+      let lessonId: string | null = null;
+
+      try {
+        // Validate video size if provided
+        if (videoFile) {
+          if (!validateFileSize(videoFile.size, MAX_VIDEO_SIZE)) {
+            throw new Error("Video size exceeds 2GB limit");
+          }
+          uploadedFilePath = videoFile.path;
+        }
+
+        // Parse and validate lesson data
+        const lessonData = {
+          ...req.body,
+          duration: parseInt(req.body.duration),
+          order: parseInt(req.body.order),
+          requiresPrevious: req.body.requiresPrevious === "true" || req.body.requiresPrevious === true,
+          isFree: req.body.isFree === "true" || req.body.isFree === true,
+        };
+
+        const validated = insertLessonSchema.parse(lessonData);
+
+        // Create lesson in database
+        const lesson = await storage.createLesson(validated);
+        lessonId = lesson.id;
+
+        // Move video to final destination if uploaded
+        if (videoFile && lessonId && validated.courseId) {
+          const courseDir = getCourseUploadDir(validated.courseId);
+          const videoDir = path.join(courseDir, "videos", lessonId);
+          ensureDir(videoDir);
+          
+          const finalPath = path.join(videoDir, generateUniqueFilename(videoFile.originalname, "lesson"));
+          fs.renameSync(videoFile.path, finalPath);
+          
+          // Update lesson with video paths
+          await storage.updateLesson(lessonId, {
+            videoUrl: `/uploads/courses/${validated.courseId}/videos/${lessonId}/${path.basename(finalPath)}`,
+            videoFilePath: finalPath,
+          });
+        }
+
+        res.json(lesson);
+      } catch (error: any) {
+        // Comprehensive cleanup on error
+        const filesToCleanup: string[] = [];
+        
+        // Add temp file if it exists
+        if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+          filesToCleanup.push(uploadedFilePath);
+        }
+        
+        // Add final video directory if lesson was created
+        if (lessonId && validated?.courseId) {
+          const videoDir = path.join(getCourseUploadDir(validated.courseId), "videos", lessonId);
+          if (fs.existsSync(videoDir)) {
+            filesToCleanup.push(videoDir);
+          }
+        }
+        
+        // Clean up all files
+        await cleanupFiles(filesToCleanup);
+
+        // Delete the lesson from database if it was created
+        if (lessonId) {
+          try {
+            await storage.deleteLesson(lessonId);
+          } catch {}
+        }
+
+        res.status(400).json({ message: error.message || "Failed to create lesson" });
+      }
+    });
   });
 
   app.delete("/api/admin/lessons/:id", isAuthenticated, requireAdmin, async (req, res) => {

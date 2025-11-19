@@ -50,7 +50,10 @@ export default function AdminCourses() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [lessonVideoFile, setLessonVideoFile] = useState<File | null>(null);
+  const [lessonUploadProgress, setLessonUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["/api/admin/courses"],
@@ -83,10 +86,9 @@ export default function AdminCourses() {
   });
 
   const lessonFormSchema = insertLessonSchema.extend({
-    videoUrl: z.string().url("Please enter a valid video URL").min(1, "Video URL is required"),
     titleEn: z.string().min(1, "English title is required"),
     titleAr: z.string().min(1, "Arabic title is required"),
-  }).omit({ courseId: true });
+  }).omit({ courseId: true, videoUrl: true, videoFilePath: true });
 
   const lessonForm = useForm({
     resolver: zodResolver(lessonFormSchema),
@@ -95,7 +97,6 @@ export default function AdminCourses() {
       titleAr: "",
       descriptionEn: "",
       descriptionAr: "",
-      videoUrl: "",
       duration: 30,
       order: 1,
       requiresPrevious: true,
@@ -177,7 +178,34 @@ export default function AdminCourses() {
 
   const createLessonMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/lessons", data);
+      const formData = new FormData();
+      
+      // Append all form fields
+      Object.keys(data).forEach((key) => {
+        if (data[key] !== null && data[key] !== undefined) {
+          formData.append(key, data[key].toString());
+        }
+      });
+      
+      // Append video file if selected
+      if (lessonVideoFile) {
+        formData.append("video", lessonVideoFile);
+      }
+      
+      // Use axios for upload progress tracking
+      const response = await axios.post("/api/admin/lessons", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent: any) => {
+          const progress = progressEvent.total
+            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            : 0;
+          setLessonUploadProgress(progress);
+        },
+      });
+      
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/courses/${selectedCourseId}/lessons`] });
@@ -189,7 +217,17 @@ export default function AdminCourses() {
             : "Lesson created successfully",
       });
       setLessonDialogOpen(false);
+      setLessonVideoFile(null);
+      setLessonUploadProgress(0);
       lessonForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.response?.data?.message || error.message || "Failed to create lesson",
+        variant: "destructive",
+      });
+      setLessonUploadProgress(0);
     },
   });
 
@@ -212,23 +250,27 @@ export default function AdminCourses() {
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
+      // Validate file type (images only)
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
         toast({
           title: language === "ar" ? "خطأ" : "Error",
-          description: language === "ar" ? "يرجى تحميل صورة فقط" : "Please upload an image file only",
+          description: language === "ar" ? "يرجى تحميل صورة (JPEG، PNG، أو WebP)" : "Please upload an image (JPEG, PNG, or WebP)",
           variant: "destructive",
         });
+        e.target.value = ''; // Reset input
         return;
       }
       
       // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
         toast({
           title: language === "ar" ? "خطأ" : "Error",
           description: language === "ar" ? "حجم الصورة يجب أن يكون أقل من 5 ميجابايت" : "Image size must be less than 5MB",
           variant: "destructive",
         });
+        e.target.value = ''; // Reset input
         return;
       }
       
@@ -246,11 +288,42 @@ export default function AdminCourses() {
   const onSubmit = (data: any) => {
     createCourseMutation.mutate({
       ...data,
-      level: parseInt(data.level),
-      price: parseFloat(data.price),
-      duration: parseInt(data.duration),
+      level: data.level,
+      price: data.price,
+      duration: data.duration,
       requiredPlanId: data.requiredPlanId === "none" ? null : data.requiredPlanId,
     });
+  };
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type (videos only)
+      const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "يرجى تحميل ملف فيديو (MP4، WebM، أو MOV)" : "Please upload a video file (MP4, WebM, or MOV)",
+          variant: "destructive",
+        });
+        e.target.value = ''; // Reset input
+        return;
+      }
+      
+      // Validate file size (2GB max)
+      const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
+      if (file.size > maxSize) {
+        toast({
+          title: language === "ar" ? "خطأ" : "Error",
+          description: language === "ar" ? "حجم الفيديو يجب أن يكون أقل من 2 جيجابايت" : "Video size must be less than 2GB",
+          variant: "destructive",
+        });
+        e.target.value = ''; // Reset input
+        return;
+      }
+      
+      setLessonVideoFile(file);
+    }
   };
 
   const onLessonSubmit = (data: any) => {
@@ -262,6 +335,16 @@ export default function AdminCourses() {
       });
       return;
     }
+
+    if (!lessonVideoFile) {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: language === "ar" ? "يرجى تحميل ملف فيديو" : "Please upload a video file",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createLessonMutation.mutate({
       ...data,
       courseId: selectedCourseId,
@@ -756,23 +839,37 @@ export default function AdminCourses() {
                   />
                 </div>
 
-                <FormField
-                  control={lessonForm.control}
-                  name="videoUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Video URL (YouTube, Vimeo, etc.)</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="https://www.youtube.com/watch?v=..."
-                          data-testid="input-lesson-video-url"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <div className="space-y-2">
+                  <Label htmlFor="lesson-video-upload">
+                    {language === "ar" ? "ملف الفيديو" : "Lesson Video"}
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="lesson-video-upload"
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoChange}
+                      ref={videoInputRef}
+                      data-testid="input-lesson-video-file"
+                      className="flex-1"
+                    />
+                    {lessonVideoFile && (
+                      <Badge variant="secondary">
+                        {(lessonVideoFile.size / (1024 * 1024)).toFixed(1)} MB
+                      </Badge>
+                    )}
+                  </div>
+                  {lessonVideoFile && (
+                    <p className="text-xs text-muted-foreground">
+                      {lessonVideoFile.name}
+                    </p>
                   )}
-                />
+                  <p className="text-xs text-muted-foreground">
+                    {language === "ar"
+                      ? "MP4، WebM، أو MOV (حجم أقصى 2 جيجابايت)"
+                      : "MP4, WebM, or MOV (max 2GB)"}
+                  </p>
+                </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <FormField
@@ -848,9 +945,21 @@ export default function AdminCourses() {
                   )}
                 />
 
+                {lessonUploadProgress > 0 && lessonUploadProgress < 100 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {language === "ar" ? "جاري رفع الفيديو..." : "Uploading video..."}
+                      </span>
+                      <span className="font-medium">{lessonUploadProgress}%</span>
+                    </div>
+                    <Progress value={lessonUploadProgress} className="h-2" />
+                  </div>
+                )}
+
                 <Button
                   type="submit"
-                  disabled={createLessonMutation.isPending || !selectedCourseId}
+                  disabled={createLessonMutation.isPending || !selectedCourseId || (lessonUploadProgress > 0 && lessonUploadProgress < 100)}
                   className="w-full"
                   data-testid="button-submit-lesson"
                 >
