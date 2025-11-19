@@ -44,8 +44,8 @@ export default function CoursePreview() {
       hasIncrementedRef.current.add(id);
       
       apiRequest("POST", `/api/courses/${id}/increment-views`, {})
-        .then((updatedCourse) => {
-          queryClient.setQueryData([`/api/courses/${id}`], updatedCourse);
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: [`/api/courses/${id}`] });
         })
         .catch((error) => {
           console.error("Failed to increment views:", error);
@@ -99,7 +99,8 @@ export default function CoursePreview() {
   const minutes = totalDuration % 60;
 
   const handleStartCourse = () => {
-    navigate(`/course/${course.id}`);
+    if (!id) return;
+    navigate(`/course/${id}`);
   };
 
   return (
@@ -165,13 +166,15 @@ export default function CoursePreview() {
                   <Separator orientation="vertical" className="h-6" />
 
                   {/* Launch Date */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="course-launch-date">
-                    <Calendar className="h-4 w-4" />
-                    <span data-testid="text-launch-date">
-                      {language === "ar" ? "تم الإطلاق: " : "Launched: "}
-                      {format(new Date(course.createdAt!), "MMM yyyy")}
-                    </span>
-                  </div>
+                  {course.createdAt && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="course-launch-date">
+                      <Calendar className="h-4 w-4" />
+                      <span data-testid="text-launch-date">
+                        {language === "ar" ? "تم الإطلاق: " : "Launched: "}
+                        {format(new Date(course.createdAt), "MMM yyyy")}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Badges */}

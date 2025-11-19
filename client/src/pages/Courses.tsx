@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, BookOpen, Lock, CheckCircle2 } from "lucide-react";
+import { Clock, BookOpen, Lock, CheckCircle2, Eye } from "lucide-react";
 import type { Course } from "@shared/schema";
 import { Link } from "wouter";
 import { useState } from "react";
@@ -197,20 +197,22 @@ export default function Courses() {
                             className="w-full"
                             disabled={isLocked}
                           >
-                            <Link href={`/course/${course.id}`}>
-                              <a className="flex items-center justify-center gap-2" data-testid={`button-view-course-${course.id}`}>
-                                {isLocked ? (
-                                  <>
-                                    <Lock className="h-4 w-4" />
-                                    {t("courses.locked")}
-                                  </>
-                                ) : (
-                                  <>
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    {t("courses.continue")}
-                                  </>
-                                )}
-                              </a>
+                            <Link 
+                              href={`/preview/${course.id}`}
+                              className="flex items-center justify-center gap-2" 
+                              data-testid={`button-view-course-${course.id}`}
+                            >
+                              {isLocked ? (
+                                <>
+                                  <Lock className="h-4 w-4" />
+                                  {t("courses.locked")}
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="h-4 w-4" />
+                                  {language === "ar" ? "معاينة الدورة" : "View Course"}
+                                </>
+                              )}
                             </Link>
                           </Button>
                         ) : (
@@ -218,7 +220,12 @@ export default function Courses() {
                             asChild
                             className="w-full"
                           >
-                            <a href="/api/login" data-testid={`button-enroll-${course.id}`}>{t("courses.enroll")}</a>
+                            <Link 
+                              href={`/preview/${course.id}`}
+                              data-testid={`button-enroll-${course.id}`}
+                            >
+                              {language === "ar" ? "معاينة الدورة" : "Preview Course"}
+                            </Link>
                           </Button>
                         )}
                       </CardContent>

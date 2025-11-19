@@ -40,7 +40,7 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/courses" component={Courses} />
-      <Route path="/course-preview/:id" component={CoursePreview} />
+      <Route path="/preview/:id" component={CoursePreview} />
       <Route path="/course/:id" component={CourseDetail} />
       <Route path="/news" component={News} />
 
