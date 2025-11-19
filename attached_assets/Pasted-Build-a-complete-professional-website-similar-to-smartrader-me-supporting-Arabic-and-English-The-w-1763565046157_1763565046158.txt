@@ -1,0 +1,40 @@
+Build a complete professional website similar to smartrader.me, supporting Arabic and English. The website should include a modern landing page that displays information about trading courses, features, and benefits. At the top of the home page, include a live testimonial slider and real-time cryptocurrency prices fetched from Binance’s free public API.
+
+The site must include multiple pages such as Home, About, Services, Courses, Contact, Pricing, and more.
+
+Add a full user authentication system (register, login, forgot password) and create a complete user dashboard where registered members can view available courses. Some courses should be free, and others locked until the user subscribes.
+
+Build a full subscription system: users must choose between crypto payments (wallet transfer) or bank transfer. After payment, users upload proof of payment (image receipt). Admins can review, accept, or reject these payment proofs in the admin dashboard.
+
+Create an advanced Admin Dashboard where admins can:
+– Manage users and subscriptions
+– Upload content, videos, documents
+– Create/edit/delete courses
+– Lock/unlock lessons
+– Schedule Zoom meetings and upload the meeting link
+– Upload videos that require completing previous lessons before access (progress tracking)
+– Manage subscription plans
+– View analytics (subscriptions, revenue, user activity, payments, referrals, etc.)
+
+For the courses system:
+– Support multiple levels (Level 1, Level 2, Level 3)
+– Track user progress
+– Lock videos for non-subscribers
+– Track “video completed” to unlock future lessons
+
+Payment system:
+– Support crypto payments (USDT / BTC / ETH wallet addresses)
+– Support bank transfer uploads
+– Automatic notification to admin
+
+Admin Dashboard:
+– Full control panel
+– Analytics graphs
+– Payment review system
+– Course/video uploads
+– Zoom meeting scheduling
+– Multilingual content management
+
+The design must be premium, smooth, and modern (similar to SmartTrader), mobile-responsive, and RTL compatible for Arabic.
+
+Build the project with a scalable structure, clean UI, seamless UX, and fully secure routes.
