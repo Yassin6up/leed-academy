@@ -66,7 +66,7 @@ export default function AdminMeetings() {
       descriptionAr: "",
       scheduledAt: "",
       zoomLink: "",
-      duration: "60",
+      duration: 60,
       isPaidOnly: true,
       courseId: "none",
     },
@@ -76,7 +76,7 @@ export default function AdminMeetings() {
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/admin/meetings", {
         ...data,
-        duration: parseInt(data.duration),
+        duration: typeof data.duration === 'number' ? data.duration : parseInt(data.duration),
         scheduledAt: new Date(data.scheduledAt).toISOString(),
         courseId: data.courseId === "none" ? null : data.courseId,
       });
@@ -100,7 +100,7 @@ export default function AdminMeetings() {
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       return await apiRequest("PATCH", `/api/admin/meetings/${id}`, {
         ...data,
-        duration: parseInt(data.duration),
+        duration: typeof data.duration === 'number' ? data.duration : parseInt(data.duration),
         scheduledAt: new Date(data.scheduledAt).toISOString(),
         courseId: data.courseId === "none" ? null : data.courseId,
       });
@@ -158,7 +158,7 @@ export default function AdminMeetings() {
       descriptionAr: meeting.descriptionAr || "",
       scheduledAt: localDateTime,
       zoomLink: meeting.zoomLink,
-      duration: meeting.duration.toString(),
+      duration: meeting.duration,
       isPaidOnly: meeting.isPaidOnly ?? true,
       courseId: meeting.courseId || "none",
     });
@@ -334,10 +334,11 @@ export default function AdminMeetings() {
                         </FormLabel>
                         <FormControl>
                           <Input
-                            {...field}
                             type="number"
                             min="15"
                             step="15"
+                            value={field.value}
+                            onChange={(e) => field.onChange(e.target.value)}
                             data-testid="input-duration"
                           />
                         </FormControl>
