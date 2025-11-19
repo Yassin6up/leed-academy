@@ -243,6 +243,7 @@ export const testimonials = pgTable("testimonials", {
   contentAr: text("content_ar").notNull(),
   rating: integer("rating").notNull().default(5),
   imageUrl: varchar("image_url"),
+  userId: varchar("user_id").references(() => users.id),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -253,6 +254,22 @@ export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
 });
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type Testimonial = typeof testimonials.$inferSelect;
+
+// Settings table for platform configuration
+export const settings = pgTable("settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key").notNull().unique(),
+  value: text("value"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSettingSchema = createInsertSchema(settings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type Setting = typeof settings.$inferSelect;
+export type InsertSetting = z.infer<typeof insertSettingSchema>;
 
 // Payment Settings (Admin configurable)
 export const paymentSettings = pgTable("payment_settings", {

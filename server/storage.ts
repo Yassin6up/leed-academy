@@ -10,6 +10,7 @@ import {
   meetings,
   testimonials,
   paymentSettings,
+  settings,
   type User,
   type UpsertUser,
   type Course,
@@ -30,6 +31,7 @@ import {
   type InsertTestimonial,
   type PaymentSettings,
   type InsertPaymentSettings,
+  type Setting,
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -114,6 +116,11 @@ export interface IStorage {
   // Payment Settings methods
   getPaymentSettings(): Promise<PaymentSettings | undefined>;
   upsertPaymentSettings(settings: InsertPaymentSettings): Promise<PaymentSettings>;
+  
+  // Settings methods
+  getSetting(key: string): Promise<Setting | undefined>;
+  getAllSettings(): Promise<Setting[]>;
+  upsertSetting(key: string, value: string): Promise<Setting>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -640,6 +647,32 @@ export class DatabaseStorage implements IStorage {
     
     const [newSettings] = await db.insert(paymentSettings).values(settings).returning();
     return newSettings;
+  }
+
+  // Settings methods
+  async getSetting(key: string): Promise<Setting | undefined> {
+    const [setting] = await db.select().from(settings).where(eq(settings.key, key)).limit(1);
+    return setting;
+  }
+
+  async getAllSettings(): Promise<Setting[]> {
+    return await db.select().from(settings);
+  }
+
+  async upsertSetting(key: string, value: string): Promise<Setting> {
+    const existing = await this.getSetting(key);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(settings)
+        .set({ value, updatedAt: new Date() })
+        .where(eq(settings.key, key))
+        .returning();
+      return updated;
+    }
+    
+    const [newSetting] = await db.insert(settings).values({ key, value }).returning();
+    return newSetting;
   }
 }
 

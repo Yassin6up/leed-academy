@@ -25,6 +25,11 @@ import AdminCourses from "@/pages/admin/AdminCourses";
 import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminMeetings from "@/pages/admin/AdminMeetings";
+import JoinGroup from "@/pages/dashboard/JoinGroup";
+import UserSettings from "@/pages/dashboard/UserSettings";
+import Ratings from "@/pages/dashboard/Ratings";
+import SubscriptionPage from "@/pages/dashboard/Subscription";
+import { UserLayout } from "@/pages/dashboard/UserLayout";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,7 +50,41 @@ function Router() {
       {/* Protected Routes */}
       {isAuthenticated && (
         <>
-          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/dashboard">
+            {() => (
+              <UserLayout>
+                <Dashboard />
+              </UserLayout>
+            )}
+          </Route>
+          <Route path="/dashboard/subscription">
+            {() => (
+              <UserLayout>
+                <SubscriptionPage />
+              </UserLayout>
+            )}
+          </Route>
+          <Route path="/dashboard/join-group">
+            {() => (
+              <UserLayout>
+                <JoinGroup />
+              </UserLayout>
+            )}
+          </Route>
+          <Route path="/dashboard/settings">
+            {() => (
+              <UserLayout>
+                <UserSettings />
+              </UserLayout>
+            )}
+          </Route>
+          <Route path="/dashboard/ratings">
+            {() => (
+              <UserLayout>
+                <Ratings />
+              </UserLayout>
+            )}
+          </Route>
           <Route path="/subscribe/:planId?" component={Subscribe} />
 
           {/* Admin Routes */}

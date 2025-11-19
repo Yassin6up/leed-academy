@@ -966,6 +966,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Settings API (for social links, etc.)
+  app.get("/api/settings", async (_req, res) => {
+    try {
+      const settings = await storage.getAllSettings();
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const settingsSchema = z.object({
+        settings: z.array(z.object({
+          key: z.string().min(1),
+          value: z.string(),
+        })),
+      });
+      
+      const { settings: settingsArray } = settingsSchema.parse(req.body);
+      
+      const updated = await Promise.all(
+        settingsArray.map(async (setting) => {
+          return await storage.upsertSetting(setting.key, setting.value);
+        })
+      );
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // User Profile & Settings API
+  app.patch("/api/user/profile", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      
+      const profileSchema = z.object({
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        phone: z.string().optional(),
+      });
+      
+      const validated = profileSchema.parse(req.body);
+      
+      const updated = await storage.updateUser(userId, validated);
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/user/password", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      
+      const passwordSchema = z.object({
+        currentPassword: z.string().min(6),
+        newPassword: z.string().min(6),
+      });
+      
+      const { currentPassword, newPassword } = passwordSchema.parse(req.body);
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+      
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await storage.updateUser(userId, { passwordHash: hashedPassword });
+      
+      res.json({ message: "Password updated successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // User Subscription API
+  app.get("/api/user/subscription", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      const subscription = await storage.getUserSubscription(userId);
+      
+      if (!subscription) {
+        return res.json(null);
+      }
+      
+      const plan = subscription.planId 
+        ? await storage.getSubscriptionPlan(subscription.planId)
+        : null;
+      
+      res.json({ ...subscription, plan });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // User Reviews API
+  app.get("/api/user/reviews", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const allTestimonials = await storage.getAllTestimonials();
+      const userReviews = allTestimonials.filter(
+        t => t.userId === userId
+      );
+      
+      res.json(userReviews);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/user/reviews", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      
+      const reviewSchema = z.object({
+        rating: z.number().min(1).max(5),
+        content: z.string().min(10).max(1000),
+      });
+      
+      const { rating, content } = reviewSchema.parse(req.body);
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const testimonial = await storage.createTestimonial({
+        nameEn: `${user.firstName} ${user.lastName}`,
+        nameAr: `${user.firstName} ${user.lastName}`,
+        roleEn: "Student",
+        roleAr: "طالب",
+        contentEn: content,
+        contentAr: content,
+        rating,
+        userId,
+        isActive: false, // Requires admin approval
+      });
+      
+      res.json(testimonial);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
