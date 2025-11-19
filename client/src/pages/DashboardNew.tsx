@@ -3,7 +3,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { useLanguage } from "@/lib/i18n";
 import { useLocation } from "wouter";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { BookOpen, CreditCard, Users, Settings, Star } from "lucide-react";
 import MyCourses from "@/components/dashboard/tabs/MyCourses";
 import MySubscription from "@/components/dashboard/tabs/MySubscription";
@@ -12,6 +12,7 @@ import SettingsTab from "@/components/dashboard/tabs/SettingsTab";
 import RatingsTab from "@/components/dashboard/tabs/RatingsTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function DashboardNew() {
   const { language } = useLanguage();
@@ -92,44 +93,72 @@ export default function DashboardNew() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-20">
-        <div className="container mx-auto px-6 py-8">
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2 mb-8 h-auto bg-muted p-2 rounded-lg">
-              {tabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground"
-                  data-testid={`tab-${tab.value}`}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+      <main className="pt-20 pb-20 md:pb-0">
+        <div className="container mx-auto px-0 md:px-6">
+          <div className="flex flex-col md:flex-row gap-0 md:gap-6 py-0 md:py-8">
+            {/* Desktop Sidebar - Hidden on Mobile */}
+            <aside className="hidden md:block w-64 flex-shrink-0">
+              <div className="sticky top-24 space-y-2 p-4 bg-muted rounded-lg">
+                <h2 className="px-4 py-2 text-lg font-heading font-bold text-foreground">
+                  {language === "ar" ? "لوحة التحكم" : "Dashboard"}
+                </h2>
+                <nav className="space-y-1">
+                  {tabs.map((tab) => (
+                    <Button
+                      key={tab.value}
+                      variant={activeTab === tab.value ? "default" : "ghost"}
+                      className={cn(
+                        "w-full justify-start gap-3 text-base",
+                        activeTab === tab.value && "bg-background"
+                      )}
+                      onClick={() => handleTabChange(tab.value)}
+                      data-testid={`sidebar-tab-${tab.value}`}
+                    >
+                      <tab.icon className="h-5 w-5" />
+                      {tab.label}
+                    </Button>
+                  ))}
+                </nav>
+              </div>
+            </aside>
 
-            <TabsContent value="courses" className="mt-0">
-              <MyCourses />
-            </TabsContent>
-
-            <TabsContent value="subscription" className="mt-0">
-              <MySubscription />
-            </TabsContent>
-
-            <TabsContent value="join-group" className="mt-0">
-              <JoinGroupTab />
-            </TabsContent>
-
-            <TabsContent value="ratings" className="mt-0">
-              <RatingsTab />
-            </TabsContent>
-
-            <TabsContent value="settings" className="mt-0">
-              <SettingsTab />
-            </TabsContent>
-          </Tabs>
+            {/* Main Content */}
+            <div className="flex-1 min-w-0 px-4 md:px-0">
+              {activeTab === "courses" && <MyCourses />}
+              {activeTab === "subscription" && <MySubscription />}
+              {activeTab === "join-group" && <JoinGroupTab />}
+              {activeTab === "ratings" && <RatingsTab />}
+              {activeTab === "settings" && <SettingsTab />}
+            </div>
+          </div>
         </div>
+
+        {/* Mobile Bottom Navigation - Hidden on Desktop */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
+          <div className="grid grid-cols-5 gap-1 p-2">
+            {tabs.map((tab) => (
+              <Button
+                key={tab.value}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "flex flex-col items-center gap-1 h-auto py-2 px-1",
+                  activeTab === tab.value && "bg-muted text-primary"
+                )}
+                onClick={() => handleTabChange(tab.value)}
+                data-testid={`mobile-tab-${tab.value}`}
+              >
+                <tab.icon className={cn(
+                  "h-5 w-5",
+                  activeTab === tab.value && "text-primary"
+                )} />
+                <span className="text-xs truncate w-full text-center">
+                  {tab.label}
+                </span>
+              </Button>
+            ))}
+          </div>
+        </nav>
       </main>
       <Footer />
     </div>
