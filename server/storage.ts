@@ -88,6 +88,9 @@ export interface IStorage {
   // Testimonial methods
   getAllTestimonials(): Promise<Testimonial[]>;
   createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial>;
+  
+  // Stats methods
+  getStats(): Promise<{ userCount: number; courseCount: number; satisfactionRate: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -377,6 +380,37 @@ export class DatabaseStorage implements IStorage {
   async createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial> {
     const [newTestimonial] = await db.insert(testimonials).values(testimonial).returning();
     return newTestimonial;
+  }
+  
+  // Stats methods
+  async getStats(): Promise<{ userCount: number; courseCount: number; satisfactionRate: number }> {
+    const { sql } = await import("drizzle-orm");
+    
+    const [{ userCount }] = await db
+      .select({ userCount: sql<number>`cast(count(*) as integer)` })
+      .from(users);
+    
+    const [{ courseCount }] = await db
+      .select({ courseCount: sql<number>`cast(count(*) as integer)` })
+      .from(courses);
+    
+    const [{ testimonialCount, totalRating }] = await db
+      .select({
+        testimonialCount: sql<number>`cast(count(*) as integer)`,
+        totalRating: sql<number>`cast(coalesce(sum(${testimonials.rating}), 0) as integer)`,
+      })
+      .from(testimonials);
+    
+    let satisfactionRate = 0;
+    if (testimonialCount > 0 && totalRating > 0) {
+      satisfactionRate = Math.round((totalRating / (testimonialCount * 5)) * 100);
+    }
+    
+    return {
+      userCount,
+      courseCount,
+      satisfactionRate,
+    };
   }
 }
 

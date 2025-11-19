@@ -2,10 +2,15 @@ import { useLanguage } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import heroImage from "@assets/generated_images/Trading_hero_background_image_e876a55e.png";
 
 export function Hero() {
   const { t } = useLanguage();
+  
+  const { data: stats } = useQuery<{ userCount: number; courseCount: number; satisfactionRate: number }>({
+    queryKey: ["/api/stats"],
+  });
 
   return (
     <section className="relative min-h-[85vh] flex items-center overflow-hidden">
@@ -63,19 +68,37 @@ export function Hero() {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-6 mt-12 max-w-xl">
             <div data-testid="stat-students">
-              <p className="text-3xl font-bold text-foreground">10K+</p>
+              <p className="text-3xl font-bold text-foreground">
+                {stats 
+                  ? stats.userCount > 0 
+                    ? stats.userCount.toLocaleString()
+                    : t("language") === "ar" ? "قريباً" : "Coming Soon"
+                  : "10K+"}
+              </p>
               <p className="text-sm text-muted-foreground">
                 {t("language") === "ar" ? "طالب نشط" : "Active Students"}
               </p>
             </div>
             <div data-testid="stat-courses">
-              <p className="text-3xl font-bold text-foreground">50+</p>
+              <p className="text-3xl font-bold text-foreground">
+                {stats 
+                  ? stats.courseCount > 0 
+                    ? stats.courseCount.toString()
+                    : t("language") === "ar" ? "قريباً" : "Coming Soon"
+                  : "50+"}
+              </p>
               <p className="text-sm text-muted-foreground">
                 {t("language") === "ar" ? "دورة" : "Courses"}
               </p>
             </div>
             <div data-testid="stat-satisfaction">
-              <p className="text-3xl font-bold text-foreground">95%</p>
+              <p className="text-3xl font-bold text-foreground">
+                {stats 
+                  ? stats.satisfactionRate > 0 
+                    ? `${stats.satisfactionRate}%`
+                    : t("language") === "ar" ? "غير متاح" : "N/A"
+                  : "95%"}
+              </p>
               <p className="text-sm text-muted-foreground">
                 {t("language") === "ar" ? "رضا" : "Satisfaction"}
               </p>
