@@ -143,6 +143,31 @@ export const insertLessonSchema = createInsertSchema(lessons).omit({
 export type InsertLesson = z.infer<typeof insertLessonSchema>;
 export type Lesson = typeof lessons.$inferSelect;
 
+// Course Resources (موارد الدورة)
+export const courseResources = pgTable("course_resources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  titleEn: varchar("title_en").notNull(),
+  titleAr: varchar("title_ar").notNull(),
+  descriptionEn: text("description_en"),
+  descriptionAr: text("description_ar"),
+  fileUrl: varchar("file_url").notNull(),
+  fileName: varchar("file_name").notNull(),
+  fileType: varchar("file_type").notNull(),
+  fileSize: integer("file_size"),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCourseResourceSchema = createInsertSchema(courseResources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCourseResource = z.infer<typeof insertCourseResourceSchema>;
+export type CourseResource = typeof courseResources.$inferSelect;
+
 // Subscriptions
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

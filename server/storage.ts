@@ -3,6 +3,7 @@ import {
   users, 
   courses, 
   lessons, 
+  courseResources,
   subscriptionPlans, 
   subscriptions,
   payments,
@@ -17,6 +18,8 @@ import {
   type InsertCourse,
   type Lesson,
   type InsertLesson,
+  type CourseResource,
+  type InsertCourseResource,
   type SubscriptionPlan,
   type InsertSubscriptionPlan,
   type Subscription,
@@ -61,6 +64,13 @@ export interface IStorage {
   createLesson(lesson: InsertLesson): Promise<Lesson>;
   updateLesson(id: string, data: Partial<Lesson>): Promise<Lesson>;
   deleteLesson(id: string): Promise<void>;
+  
+  // Course Resources methods
+  getCourseResource(id: string): Promise<CourseResource | undefined>;
+  getCourseResources(courseId: string): Promise<CourseResource[]>;
+  createCourseResource(resource: InsertCourseResource): Promise<CourseResource>;
+  updateCourseResource(id: string, data: Partial<CourseResource>): Promise<CourseResource>;
+  deleteCourseResource(id: string): Promise<void>;
   
   // Subscription Plan methods
   getSubscriptionPlan(id: string): Promise<SubscriptionPlan | undefined>;
@@ -286,6 +296,42 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLesson(id: string): Promise<void> {
     await db.delete(lessons).where(eq(lessons.id, id));
+  }
+
+  // Course Resources methods
+  async getCourseResource(id: string): Promise<CourseResource | undefined> {
+    const result = await db
+      .select()
+      .from(courseResources)
+      .where(eq(courseResources.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getCourseResources(courseId: string): Promise<CourseResource[]> {
+    return await db
+      .select()
+      .from(courseResources)
+      .where(eq(courseResources.courseId, courseId))
+      .orderBy(courseResources.order);
+  }
+
+  async createCourseResource(resource: InsertCourseResource): Promise<CourseResource> {
+    const [newResource] = await db.insert(courseResources).values(resource).returning();
+    return newResource;
+  }
+
+  async updateCourseResource(id: string, data: Partial<CourseResource>): Promise<CourseResource> {
+    const [updated] = await db
+      .update(courseResources)
+      .set(data)
+      .where(eq(courseResources.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCourseResource(id: string): Promise<void> {
+    await db.delete(courseResources).where(eq(courseResources.id, id));
   }
 
   // Subscription Plan methods
