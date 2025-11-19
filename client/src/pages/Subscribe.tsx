@@ -50,7 +50,10 @@ export default function Subscribe() {
 
   const submitPaymentMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return await apiRequest("POST", "/api/payments", data);
+      return await apiRequest("/api/payments", {
+        method: "POST",
+        body: data,
+      });
     },
     onSuccess: () => {
       setStep(3);
