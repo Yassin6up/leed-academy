@@ -12,13 +12,43 @@ import {
 import { Globe, Moon, Sun, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export function Header() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { language, setLanguage, t } = useLanguage();
   const { user, isAuthenticated, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      navigate("/");
+      
+      toast({
+        title: language === "ar" ? "تم تسجيل الخروج" : "Logged out",
+        description: language === "ar" ? "تم تسجيل خروجك بنجاح" : "You have been logged out successfully",
+      });
+    } catch (error) {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: language === "ar" ? "فشل تسجيل الخروج" : "Logout failed",
+        variant: "destructive",
+      });
+    }
+  };
 
   const navItems = [
     { path: "/", label: t("nav.home") },
@@ -137,10 +167,11 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" data-testid="link-logout">
-                      {t("nav.logout")}
-                    </a>
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    data-testid="button-logout"
+                  >
+                    {t("nav.logout")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

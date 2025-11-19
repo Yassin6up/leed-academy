@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertCourseSchema, insertLessonSchema, insertPaymentSchema, insertProgressSchema } from "@shared/schema";
+import { insertCourseSchema, insertLessonSchema, insertPaymentSchema, insertProgressSchema, insertUserSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -11,7 +11,7 @@ import express from "express";
 
 // Auth middleware
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  const userId = (req.user as any)?.claims?.sub;
+  const userId = (req.session as any)?.userId;
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -67,7 +67,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register endpoint
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { email, password, firstName, lastName, phone, referredBy } = req.body;
+      // Validate input with Zod
+      const registerData = insertUserSchema.safeParse({
+        ...req.body,
+        password: req.body.password, // Zod schema expects password field
+      });
+
+      if (!registerData.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: registerData.error.errors 
+        });
+      }
+
+      const { email, password, firstName, lastName, phone, referredBy } = registerData.data;
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
@@ -85,18 +98,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referredBy,
       });
 
-      // Store user in session
-      (req.session as any).userId = user.id;
-      
-      res.json({ 
-        message: "Registration successful", 
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
+      // Regenerate session to prevent session fixation
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Registration failed" });
         }
+
+        // Store user in session
+        (req.session as any).userId = user.id;
+        
+        res.json({ 
+          message: "Registration successful", 
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+          }
+        });
       });
     } catch (error) {
       console.error("Error during registration:", error);
@@ -108,6 +129,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
+
+      // Validate input
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
       
       // Validate credentials
       const user = await storage.validateUserPassword(email, password);
@@ -115,18 +141,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      // Store user in session
-      (req.session as any).userId = user.id;
-      
-      res.json({ 
-        message: "Login successful", 
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
+      // Regenerate session to prevent session fixation
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Login failed" });
         }
+
+        // Store user in session
+        (req.session as any).userId = user.id;
+        
+        res.json({ 
+          message: "Login successful", 
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+          }
+        });
       });
     } catch (error) {
       console.error("Error during login:", error);
@@ -152,7 +186,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json(user);
+      
+      // Strip sensitive fields before sending to client
+      const { passwordHash, ...safeUser } = user;
+      res.json(safeUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -214,8 +251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/courses/:id/meetings", async (req, res) => {
     const meetings = await storage.getCourseMeetings(req.params.id);
-    const isAuth = req.isAuthenticated();
-    const userId = isAuth ? (req.user as any)?.claims?.sub : null;
+    const isAuth = ((req.session as any)?.userId !== undefined);
+    const userId = isAuth ? (req.session as any)?.userId : null;
     const user = userId ? await storage.getUser(userId) : null;
     const hasActiveSubscription = user?.subscriptionStatus === "active";
     
@@ -268,8 +305,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Returns sanitized meetings - Zoom links only visible to authenticated users with active subscriptions
   app.get("/api/meetings", async (req, res) => {
     const meetings = await storage.getAllMeetings();
-    const isAuth = req.isAuthenticated();
-    const userId = isAuth ? (req.user as any)?.claims?.sub : null;
+    const isAuth = ((req.session as any)?.userId !== undefined);
+    const userId = isAuth ? (req.session as any)?.userId : null;
     const user = userId ? await storage.getUser(userId) : null;
     const hasActiveSubscription = user?.subscriptionStatus === "active";
     
@@ -328,12 +365,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Protected routes
   app.get("/api/user/progress", isAuthenticated, async (req, res) => {
-    const progress = await storage.getUserProgress((req.user as any)?.claims?.sub);
+    const progress = await storage.getUserProgress((req.session as any)?.userId);
     res.json(progress);
   });
 
   app.get("/api/progress/:courseId", isAuthenticated, async (req, res) => {
-    const progress = await storage.getCourseProgress((req.user as any)?.claims?.sub, req.params.courseId);
+    const progress = await storage.getCourseProgress((req.session as any)?.userId, req.params.courseId);
     res.json(progress);
   });
 
@@ -341,7 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertProgressSchema.parse({
         ...req.body,
-        userId: (req.user as any)?.claims?.sub,
+        userId: (req.session as any)?.userId,
       });
       
       const progress = await storage.upsertProgress(validated);
@@ -354,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update watch progress (for sequential video tracking)
   app.patch("/api/progress/:lessonId/watch", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.session as any)?.userId;
       const { lessonId } = req.params;
       const { watchProgress, courseId } = req.body;
       
@@ -395,7 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       try {
-        const userId = (req.user as any)?.claims?.sub;
+        const userId = (req.session as any)?.userId;
         const proofImageUrl = req.file ? `/uploads/${req.file.filename}` : null;
         
         const validated = insertPaymentSchema.parse({
