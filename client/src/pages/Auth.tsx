@@ -177,7 +177,7 @@ export default function Auth() {
 
       toast({
         title: language === "ar" ? "تم التسجيل بنجاح" : "Registration successful",
-        description: language === "ar" ? "مرحباً بك في أكاديمية TradeMaster!" : "Welcome to TradeMaster Academy!",
+        description: language === "ar" ? "مرحباً بك في Leedacademya!" : "Welcome to Leedacademya!",
       });
 
       // Invalidate queries and redirect

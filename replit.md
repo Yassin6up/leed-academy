@@ -1,8 +1,8 @@
-# TradeMaster Academy - Trading Education Platform
+# Leedacademya - Trading Education Platform
 
 ## Overview
 
-TradeMaster Academy is a premium bilingual (English/Arabic) cryptocurrency trading education platform. The application provides comprehensive course management, user subscriptions, payment processing, live Zoom sessions, and progress tracking. It features a modern landing page, user dashboard, and advanced admin panel for content and subscription management.
+Leedacademya is a premium bilingual (English/Arabic) cryptocurrency trading education platform. The application provides comprehensive course management, user subscriptions, payment processing, live Zoom sessions, and progress tracking. It features a modern landing page, user dashboard, and advanced admin panel for content and subscription management.
 
 The platform is built as a full-stack TypeScript application with a React frontend and Express backend, designed to deliver a sophisticated fintech user experience with Material Design principles and premium aesthetics inspired by platforms like SmartTrader.me.
 

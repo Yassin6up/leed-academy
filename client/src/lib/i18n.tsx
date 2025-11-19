@@ -31,7 +31,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.cta.secondary": "Explore Courses",
     
     // Features
-    "features.title": "Why Choose TradeMaster Academy",
+    "features.title": "Why Choose Leedacademya",
     "features.expert.title": "Expert Instructors",
     "features.expert.desc": "Learn from certified professionals with years of trading experience",
     "features.live.title": "Live Market Data",
@@ -147,7 +147,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.cta.secondary": "استكشف الدورات",
     
     // Features
-    "features.title": "لماذا تختار أكاديمية TradeMaster",
+    "features.title": "لماذا تختار Leedacademya",
     "features.expert.title": "مدربون خبراء",
     "features.expert.desc": "تعلم من محترفين معتمدين بسنوات من الخبرة في التداول",
     "features.live.title": "بيانات السوق المباشرة",

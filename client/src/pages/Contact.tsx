@@ -57,7 +57,7 @@ export default function Contact() {
     {
       icon: Mail,
       title: language === "ar" ? "البريد الإلكتروني" : "Email",
-      value: "info@trademaster.com",
+      value: "info@leedacademya.com",
     },
     {
       icon: Phone,

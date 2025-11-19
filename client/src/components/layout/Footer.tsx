@@ -13,7 +13,7 @@ export function Footer() {
           {/* Brand */}
           <div>
             <h3 className="text-xl font-heading font-bold text-foreground mb-4">
-              TradeMaster Academy
+              Leedacademya
             </h3>
             <p className="text-muted-foreground text-sm">
               {language === "en"

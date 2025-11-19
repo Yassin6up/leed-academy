@@ -72,7 +72,7 @@ export function Header() {
             className="text-2xl font-heading font-bold text-primary hover-elevate active-elevate-2 px-3 py-2 rounded-lg transition-colors"
             data-testid="link-home-logo"
           >
-            TradeMaster
+            Leedacademya
           </Link>
 
           {/* Desktop Navigation */}

@@ -58,8 +58,8 @@ export default function About() {
               </h1>
               <p className="text-lg text-muted-foreground leading-relaxed" data-testid="text-about-description">
                 {language === "ar"
-                  ? "أكاديمية TradeMaster هي منصة تعليمية رائدة متخصصة في تعليم تداول العملات الرقمية. نحن نؤمن بأن التعليم الجيد هو مفتاح النجاح في عالم التداول المتطور باستمرار."
-                  : "TradeMaster Academy is a leading educational platform specialized in cryptocurrency trading education. We believe that quality education is the key to success in the ever-evolving world of trading."}
+                  ? "Leedacademya هي منصة تعليمية رائدة متخصصة في تعليم تداول العملات الرقمية. نحن نؤمن بأن التعليم الجيد هو مفتاح النجاح في عالم التداول المتطور باستمرار."
+                  : "Leedacademya is a leading educational platform specialized in cryptocurrency trading education. We believe that quality education is the key to success in the ever-evolving world of trading."}
               </p>
             </div>
           </div>
@@ -103,8 +103,8 @@ export default function About() {
               <div className="space-y-6 text-muted-foreground leading-relaxed">
                 <p>
                   {language === "ar"
-                    ? "تأسست أكاديمية TradeMaster من قبل مجموعة من المتداولين المحترفين الذين أرادوا مشاركة معرفتهم وخبرتهم مع المتداولين الطموحين في جميع أنحاء العالم. لقد رأينا الحاجة إلى منصة تعليمية شاملة تجمع بين التعليم النظري والتطبيق العملي."
-                    : "TradeMaster Academy was founded by a group of professional traders who wanted to share their knowledge and experience with aspiring traders worldwide. We saw the need for a comprehensive educational platform that combines theoretical education with practical application."}
+                    ? "تأسست Leedacademya من قبل مجموعة من المتداولين المحترفين الذين أرادوا مشاركة معرفتهم وخبرتهم مع المتداولين الطموحين في جميع أنحاء العالم. لقد رأينا الحاجة إلى منصة تعليمية شاملة تجمع بين التعليم النظري والتطبيق العملي."
+                    : "Leedacademya was founded by a group of professional traders who wanted to share their knowledge and experience with aspiring traders worldwide. We saw the need for a comprehensive educational platform that combines theoretical education with practical application."}
                 </p>
                 <p>
                   {language === "ar"

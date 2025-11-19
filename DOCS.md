@@ -1,8 +1,8 @@
-# TradeMaster Academy - Application Documentation
+# Leedacademya - Application Documentation
 
 ## Overview
 
-TradeMaster Academy is a comprehensive bilingual (English/Arabic) cryptocurrency trading education platform featuring:
+Leedacademya is a comprehensive bilingual (English/Arabic) cryptocurrency trading education platform featuring:
 - Multi-level course system (Level 1-3)
 - Subscription-based access control
 - Payment processing (crypto & bank transfer)
