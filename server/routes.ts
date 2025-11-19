@@ -629,6 +629,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(users);
   });
 
+  app.patch("/api/admin/users/:id/deactivate", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (req.user?.id === id) {
+        return res.status(400).json({ message: "You cannot deactivate your own account" });
+      }
+      
+      const user = await storage.deactivateUser(id);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error deactivating user:", error);
+      res.status(500).json({ message: error.message || "Failed to deactivate user" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/activate", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.activateUser(id);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error activating user:", error);
+      res.status(500).json({ message: error.message || "Failed to activate user" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (req.user?.id === id) {
+        return res.status(400).json({ message: "You cannot delete your own account" });
+      }
+      
+      await storage.deleteUser(id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: error.message || "Failed to delete user" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/cancel-subscription", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.cancelUserSubscription(id);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error cancelling subscription:", error);
+      res.status(500).json({ message: error.message || "Failed to cancel subscription" });
+    }
+  });
+
   app.get("/api/admin/courses", isAuthenticated, requireAdmin, async (_req, res) => {
     const courses = await storage.getAllCourses();
     res.json(courses);
