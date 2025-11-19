@@ -50,6 +50,10 @@ export interface IStorage {
   updateUser(id: string, data: Partial<User>): Promise<User>;
   getReferralCount(userId: string): Promise<number>;
   validateUserPassword(email: string, password: string): Promise<User | null>;
+  deactivateUser(userId: string): Promise<User>;
+  activateUser(userId: string): Promise<User>;
+  deleteUser(userId: string): Promise<void>;
+  cancelUserSubscription(userId: string): Promise<User>;
   
   // Course methods
   getCourse(id: string): Promise<Course | undefined>;
@@ -236,6 +240,37 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(eq(users.referredBy, user.referralCode));
     return referrals.length;
+  }
+
+  async deactivateUser(userId: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  async activateUser(userId: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, userId));
+  }
+
+  async cancelUserSubscription(userId: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ subscriptionStatus: 'cancelled', updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
   }
 
   // Course methods

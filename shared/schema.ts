@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { length: 20 }).notNull().default("user"),
   subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none"),
+  isActive: boolean("is_active").notNull().default(true),
   referralCode: varchar("referral_code", { length: 10 }).unique(),
   referredBy: varchar("referred_by", { length: 10 }),
   createdAt: timestamp("created_at").defaultNow(),
