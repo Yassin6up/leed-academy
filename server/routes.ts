@@ -245,7 +245,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public routes
   app.get("/api/courses", async (_req, res) => {
     const courses = await storage.getAllCourses();
-    res.json(courses);
+    
+    // Add lesson count to each course
+    const coursesWithCounts = await Promise.all(
+      courses.map(async (course) => {
+        const lessons = await storage.getLessonsByCourse(course.id);
+        return {
+          ...course,
+          lessonCount: lessons.length,
+        };
+      })
+    );
+    
+    res.json(coursesWithCounts);
   });
 
   app.get("/api/courses/:id", async (req, res) => {

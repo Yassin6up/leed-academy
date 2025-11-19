@@ -174,11 +174,15 @@ export default function Courses() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                           <div className="flex items-center gap-1">
                             <BookOpen className="h-4 w-4" />
-                            <span>12 {t("courses.lessons")}</span>
+                            <span data-testid={`text-lesson-count-${course.id}`}>
+                              {(course as any).lessonCount || 0} {t("courses.lessons")}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-4 w-4" />
-                            <span>{course.duration || 8} {t("courses.hours")}</span>
+                            <span data-testid={`text-duration-${course.id}`}>
+                              {course.duration || 8} {t("courses.hours")}
+                            </span>
                           </div>
                         </div>
                         {isAuthenticated ? (
