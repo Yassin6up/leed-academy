@@ -261,10 +261,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: string): Promise<void> {
+    await db.update(payments).set({ reviewedBy: null }).where(eq(payments.reviewedBy, userId));
+    await db.delete(testimonials).where(eq(testimonials.userId, userId));
+    await db.delete(progress).where(eq(progress.userId, userId));
+    await db.delete(payments).where(eq(payments.userId, userId));
+    await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
     await db.delete(users).where(eq(users.id, userId));
   }
 
   async cancelUserSubscription(userId: string): Promise<User> {
+    const subscription = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .limit(1);
+    
+    if (subscription.length > 0) {
+      await db
+        .update(subscriptions)
+        .set({ status: 'cancelled' })
+        .where(eq(subscriptions.userId, userId));
+    }
+    
     const [updated] = await db
       .update(users)
       .set({ subscriptionStatus: 'cancelled', updatedAt: new Date() })

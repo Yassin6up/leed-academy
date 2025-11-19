@@ -56,7 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       filename: (_req, file, cb) => {
         const sanitizedExt = path.extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, '');
         if (!sanitizedExt.match(/^\.(jpg|jpeg|png|pdf)$/)) {
-          return cb(new Error("Invalid file extension"));
+          return cb(new Error("Invalid file extension"), "");
         }
         const uniqueName = `${randomUUID()}${sanitizedExt}`;
         cb(null, uniqueName);
@@ -508,6 +508,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           proofImageUrl,
         });
 
+        if (!validated.planId) {
+          return res.status(400).json({ message: "Plan ID is required" });
+        }
+
         const plan = await storage.getSubscriptionPlan(validated.planId);
         if (!plan) {
           return res.status(400).json({ message: "Invalid subscription plan" });
@@ -632,8 +636,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/users/:id/deactivate", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const currentUserId = (req.session as any)?.userId;
       
-      if (req.user?.id === id) {
+      if (currentUserId === id) {
         return res.status(400).json({ message: "You cannot deactivate your own account" });
       }
       
@@ -648,6 +653,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/users/:id/activate", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = (req.session as any)?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const user = await storage.activateUser(id);
       res.json(user);
     } catch (error: any) {
@@ -659,8 +670,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/users/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const currentUserId = (req.session as any)?.userId;
       
-      if (req.user?.id === id) {
+      if (currentUserId === id) {
         return res.status(400).json({ message: "You cannot delete your own account" });
       }
       
@@ -675,6 +687,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/users/:id/cancel-subscription", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = (req.session as any)?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const targetUser = await storage.getUser(id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (!targetUser.subscriptionStatus || targetUser.subscriptionStatus === "none" || targetUser.subscriptionStatus === "cancelled") {
+        return res.status(400).json({ message: "User does not have an active subscription" });
+      }
+      
       const user = await storage.cancelUserSubscription(id);
       res.json(user);
     } catch (error: any) {

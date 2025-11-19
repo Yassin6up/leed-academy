@@ -35,12 +35,12 @@ import { useToast } from "@/hooks/use-toast";
 import { MoreVertical, UserCheck, UserX, XCircle, Trash2 } from "lucide-react";
 import type { User } from "@shared/schema";
 import { useState } from "react";
-import { useUser } from "@/lib/auth";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminUsers() {
   const { language } = useLanguage();
   const { toast } = useToast();
-  const { user: currentUser } = useUser();
+  const { user: currentUser } = useAuth();
   
   const [actionDialog, setActionDialog] = useState<{
     open: boolean;
@@ -58,9 +58,7 @@ export default function AdminUsers() {
 
   const deactivateMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return await apiRequest(`/api/admin/users/${userId}/deactivate`, {
-        method: "PATCH",
-      });
+      return await apiRequest("PATCH", `/api/admin/users/${userId}/deactivate`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -82,9 +80,7 @@ export default function AdminUsers() {
 
   const activateMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return await apiRequest(`/api/admin/users/${userId}/activate`, {
-        method: "PATCH",
-      });
+      return await apiRequest("PATCH", `/api/admin/users/${userId}/activate`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -106,9 +102,7 @@ export default function AdminUsers() {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return await apiRequest(`/api/admin/users/${userId}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/admin/users/${userId}`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -130,9 +124,7 @@ export default function AdminUsers() {
 
   const cancelSubscriptionMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return await apiRequest(`/api/admin/users/${userId}/cancel-subscription`, {
-        method: "PATCH",
-      });
+      return await apiRequest("PATCH", `/api/admin/users/${userId}/cancel-subscription`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -285,16 +277,17 @@ export default function AdminUsers() {
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         
-                        {user.isActive ? (
+                        {!isCurrentUser(user.id) && user.isActive && (
                           <DropdownMenuItem
                             onClick={() => openActionDialog("deactivate", user)}
-                            disabled={isCurrentUser(user.id)}
                             data-testid={`action-deactivate-${user.id}`}
                           >
                             <UserX className="h-4 w-4 mr-2" />
                             {language === "ar" ? "تعطيل الحساب" : "Deactivate Account"}
                           </DropdownMenuItem>
-                        ) : (
+                        )}
+                        
+                        {!user.isActive && (
                           <DropdownMenuItem
                             onClick={() => openActionDialog("activate", user)}
                             data-testid={`action-activate-${user.id}`}
@@ -314,17 +307,20 @@ export default function AdminUsers() {
                           </DropdownMenuItem>
                         )}
 
-                        <DropdownMenuSeparator />
-                        
-                        <DropdownMenuItem
-                          onClick={() => openActionDialog("delete", user)}
-                          disabled={isCurrentUser(user.id)}
-                          className="text-destructive focus:text-destructive"
-                          data-testid={`action-delete-${user.id}`}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          {language === "ar" ? "حذف المستخدم" : "Delete User"}
-                        </DropdownMenuItem>
+                        {!isCurrentUser(user.id) && (
+                          <>
+                            <DropdownMenuSeparator />
+                            
+                            <DropdownMenuItem
+                              onClick={() => openActionDialog("delete", user)}
+                              className="text-destructive focus:text-destructive"
+                              data-testid={`action-delete-${user.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {language === "ar" ? "حذف المستخدم" : "Delete User"}
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

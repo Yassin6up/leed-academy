@@ -21,8 +21,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
         <AdminSidebar />
-        <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex flex-col flex-1 relative z-0">
+          <header className="sticky top-0 z-20 flex items-center justify-between p-4 border-b border-border bg-background">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <Button
               variant="ghost"
