@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertCourseSchema, insertLessonSchema, insertPaymentSchema, insertProgressSchema, insertUserSchema } from "@shared/schema";
+import { z } from "zod";
+import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -266,6 +268,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Course not found" });
     }
     res.json(course);
+  });
+
+  app.post("/api/courses/:id/increment-views", async (req, res) => {
+    try {
+      const course = await storage.getCourse(req.params.id);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      const updated = await storage.updateCourse(req.params.id, {
+        viewsCount: (course.viewsCount || 0) + 1,
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   app.get("/api/courses/:id/lessons", async (req, res) => {

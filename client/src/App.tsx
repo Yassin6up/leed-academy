@@ -14,6 +14,7 @@ import Contact from "@/pages/Contact";
 import Pricing from "@/pages/Pricing";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
+import CoursePreview from "@/pages/CoursePreview";
 import News from "@/pages/News";
 import DashboardNew from "@/pages/DashboardNew";
 import Subscribe from "@/pages/Subscribe";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/courses" component={Courses} />
+      <Route path="/course-preview/:id" component={CoursePreview} />
       <Route path="/course/:id" component={CourseDetail} />
       <Route path="/news" component={News} />
 
