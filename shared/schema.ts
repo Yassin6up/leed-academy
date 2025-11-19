@@ -225,6 +225,7 @@ export const progress = pgTable("progress", {
   completed: boolean("completed").default(false),
   watchProgress: integer("watch_progress").default(0),
   completedAt: timestamp("completed_at"),
+  lastAccessedAt: timestamp("last_accessed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

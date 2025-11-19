@@ -884,6 +884,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Course Resources Routes
+  app.get("/api/courses/:courseId/resources", async (req, res) => {
+    try {
+      const resources = await storage.getCourseResources(req.params.courseId);
+      res.json(resources);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/courses/:courseId/resources", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { insertCourseResourceSchema } = await import("@shared/schema");
+      const validated = insertCourseResourceSchema.parse({
+        ...req.body,
+        courseId: req.params.courseId,
+      });
+      const resource = await storage.createCourseResource(validated);
+      res.json(resource);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/course-resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const resource = await storage.updateCourseResource(req.params.id, {
+        ...req.body,
+        updatedAt: new Date(),
+      });
+      res.json(resource);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/course-resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteCourseResource(req.params.id);
+      res.json({ message: "Resource deleted successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   app.get("/api/admin/payments", isAuthenticated, requireAdmin, async (_req, res) => {
     const payments = await storage.getAllPayments();
     res.json(payments);
