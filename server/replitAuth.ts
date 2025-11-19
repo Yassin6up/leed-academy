@@ -91,14 +91,33 @@ export async function setupAuth(app: Express) {
 
   const config = await getOidcConfig();
 
-  const verify: VerifyFunction = async (
-    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-    verified: passport.AuthenticateCallback
+  const verify = async (
+    req: any,
+    tokenSet: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
+    userInfo: any,
+    done: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      const user = {};
+      updateUserSession(user, tokenSet);
+      
+      // Check for referral intent in session
+      const referralIntent = req?.session?.referralIntent;
+      
+      // Use userInfo for richer profile data, await before proceeding
+      const claims = tokenSet.claims();
+      await upsertUser(claims, referralIntent);
+      
+      // Clear referral intent only after successful persistence
+      if (req?.session?.referralIntent) {
+        delete req.session.referralIntent;
+      }
+      
+      done(null, user);
+    } catch (error) {
+      console.error("Error in OIDC verify callback:", error);
+      done(error as Error);
+    }
   };
 
   const registeredStrategies = new Set<string>();
@@ -112,6 +131,7 @@ export async function setupAuth(app: Express) {
           config,
           scope: "openid email profile offline_access",
           callbackURL: `https://${domain}/api/callback`,
+          passReqToCallback: true,
         },
         verify
       );

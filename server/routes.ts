@@ -76,6 +76,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Store referral intent before OIDC redirect
+  app.post("/api/auth/referral-intent", async (req, res) => {
+    try {
+      const { referralCode } = req.body;
+      if (referralCode) {
+        // Store in session for use during OIDC callback
+        (req.session as any).referralIntent = referralCode;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error storing referral intent:", error);
+      res.status(500).json({ message: "Failed to store referral intent" });
+    }
+  });
+
   // Validate referral code
   app.get("/api/referral/validate/:code", async (req, res) => {
     try {
