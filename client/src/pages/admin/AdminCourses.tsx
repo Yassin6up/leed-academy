@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
@@ -355,6 +355,14 @@ export default function AdminCourses() {
     setSelectedCourseId(courseId);
     setLessonDialogOpen(true);
   };
+
+  // Update default order when lessons change
+  useEffect(() => {
+    if (lessons && lessonDialogOpen) {
+      const nextOrder = (lessons.length || 0) + 1;
+      lessonForm.setValue("order", nextOrder);
+    }
+  }, [lessons, lessonDialogOpen, lessonForm]);
 
   if (isLoading) {
     return (
@@ -882,6 +890,8 @@ export default function AdminCourses() {
                           <Input
                             type="number"
                             {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
+                            value={field.value}
                             data-testid="input-lesson-duration"
                           />
                         </FormControl>
@@ -899,6 +909,8 @@ export default function AdminCourses() {
                           <Input
                             type="number"
                             {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            value={field.value}
                             data-testid="input-lesson-order"
                           />
                         </FormControl>
