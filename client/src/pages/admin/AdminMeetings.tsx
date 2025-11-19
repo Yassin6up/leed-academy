@@ -74,10 +74,15 @@ export default function AdminMeetings() {
 
   const createMeetingMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Convert scheduledAt to ISO string only if it's not already
+      const scheduledAt = data.scheduledAt instanceof Date 
+        ? data.scheduledAt.toISOString() 
+        : new Date(data.scheduledAt).toISOString();
+      
       return await apiRequest("POST", "/api/admin/meetings", {
         ...data,
         duration: typeof data.duration === 'number' ? data.duration : parseInt(data.duration),
-        scheduledAt: new Date(data.scheduledAt).toISOString(),
+        scheduledAt,
         courseId: data.courseId === "none" ? null : data.courseId,
       });
     },
@@ -98,10 +103,15 @@ export default function AdminMeetings() {
 
   const updateMeetingMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      // Convert scheduledAt to ISO string only if it's not already
+      const scheduledAt = data.scheduledAt instanceof Date 
+        ? data.scheduledAt.toISOString() 
+        : new Date(data.scheduledAt).toISOString();
+      
       return await apiRequest("PATCH", `/api/admin/meetings/${id}`, {
         ...data,
         duration: typeof data.duration === 'number' ? data.duration : parseInt(data.duration),
-        scheduledAt: new Date(data.scheduledAt).toISOString(),
+        scheduledAt,
         courseId: data.courseId === "none" ? null : data.courseId,
       });
     },
