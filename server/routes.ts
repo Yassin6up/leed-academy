@@ -921,7 +921,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/meetings", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const meeting = await storage.createMeeting(req.body);
+      // Convert scheduledAt string to Date object
+      const meetingData = {
+        ...req.body,
+        scheduledAt: new Date(req.body.scheduledAt),
+        courseId: req.body.courseId || null,
+      };
+      
+      const meeting = await storage.createMeeting(meetingData);
       res.json(meeting);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -930,7 +937,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/admin/meetings/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const meeting = await storage.updateMeeting(req.params.id, req.body);
+      // Convert scheduledAt string to Date object if provided
+      const updateData = {
+        ...req.body,
+      };
+      
+      if (req.body.scheduledAt) {
+        updateData.scheduledAt = new Date(req.body.scheduledAt);
+      }
+      
+      if (req.body.courseId !== undefined) {
+        updateData.courseId = req.body.courseId || null;
+      }
+      
+      const meeting = await storage.updateMeeting(req.params.id, updateData);
       res.json(meeting);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
