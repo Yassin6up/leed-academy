@@ -1,0 +1,195 @@
+import { Link, useLocation } from "wouter";
+import { useLanguage } from "@/lib/i18n";
+import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/lib/theme";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Globe, Moon, Sun, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+export function Header() {
+  const [location] = useLocation();
+  const { language, setLanguage, t } = useLanguage();
+  const { user, isAuthenticated, isAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navItems = [
+    { path: "/", label: t("nav.home") },
+    { path: "/about", label: t("nav.about") },
+    { path: "/services", label: t("nav.services") },
+    { path: "/courses", label: t("nav.courses") },
+    { path: "/pricing", label: t("nav.pricing") },
+    { path: "/contact", label: t("nav.contact") },
+  ];
+
+  const isActive = (path: string) => location === path;
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+      <div className="container mx-auto px-6">
+        <div className="flex items-center justify-between h-20">
+          {/* Logo */}
+          <Link href="/">
+            <a
+              className="text-2xl font-heading font-bold text-primary hover-elevate active-elevate-2 px-3 py-2 rounded-lg transition-colors"
+              data-testid="link-home-logo"
+            >
+              TradeMaster
+            </a>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {navItems.map((item) => (
+              <Link key={item.path} href={item.path}>
+                <a
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${
+                    isActive(item.path)
+                      ? "text-foreground bg-accent"
+                      : "text-muted-foreground"
+                  }`}
+                  data-testid={`link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  {item.label}
+                </a>
+              </Link>
+            ))}
+          </nav>
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-2">
+            {/* Language Switcher */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-testid="button-language-toggle"
+                >
+                  <Globe className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => setLanguage("en")}
+                  data-testid="option-language-en"
+                >
+                  English
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setLanguage("ar")}
+                  data-testid="option-language-ar"
+                >
+                  العربية
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Theme Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              data-testid="button-theme-toggle"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </Button>
+
+            {/* User Menu or Login */}
+            {isAuthenticated && user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full"
+                    data-testid="button-user-menu"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={user.profileImageUrl || ""} />
+                      <AvatarFallback>
+                        {user.firstName?.[0] || user.email?.[0] || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <Link href="/dashboard">
+                    <DropdownMenuItem data-testid="link-dashboard">
+                      {t("nav.dashboard")}
+                    </DropdownMenuItem>
+                  </Link>
+                  {isAdmin && (
+                    <Link href="/admin">
+                      <DropdownMenuItem data-testid="link-admin">
+                        {t("nav.admin")}
+                      </DropdownMenuItem>
+                    </Link>
+                  )}
+                  <DropdownMenuItem asChild>
+                    <a href="/api/logout" data-testid="link-logout">
+                      {t("nav.logout")}
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild data-testid="button-login">
+                <a href="/api/login">{t("nav.login")}</a>
+              </Button>
+            )}
+
+            {/* Mobile Menu Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              data-testid="button-mobile-menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <nav className="lg:hidden py-4 border-t border-border">
+            <div className="flex flex-col gap-2">
+              {navItems.map((item) => (
+                <Link key={item.path} href={item.path}>
+                  <a
+                    className={`block px-4 py-3 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${
+                      isActive(item.path)
+                        ? "text-foreground bg-accent"
+                        : "text-muted-foreground"
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    data-testid={`mobile-link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    {item.label}
+                  </a>
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
+      </div>
+    </header>
+  );
+}
