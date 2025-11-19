@@ -32,16 +32,19 @@ import {
   type InsertPaymentSettings,
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByReferralCode(code: string): Promise<User | undefined>;
+  createUser(userData: { email: string; password: string; firstName: string; lastName: string; phone?: string; referredBy?: string }): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
   getReferralCount(userId: string): Promise<number>;
+  validateUserPassword(email: string, password: string): Promise<User | null>;
   
   // Course methods
   getCourse(id: string): Promise<Course | undefined>;
@@ -128,6 +131,53 @@ export class DatabaseStorage implements IStorage {
   async getUserByReferralCode(code: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.referralCode, code)).limit(1);
     return result[0];
+  }
+
+  async createUser(userData: { email: string; password: string; firstName: string; lastName: string; phone?: string; referredBy?: string }): Promise<User> {
+    // Hash the password
+    const passwordHash = await bcrypt.hash(userData.password, 10);
+    
+    // Generate unique referral code
+    let referralCode = this.generateReferralCode();
+    let isUnique = false;
+    while (!isUnique) {
+      const existing = await this.getUserByReferralCode(referralCode);
+      if (!existing) {
+        isUnique = true;
+      } else {
+        referralCode = this.generateReferralCode();
+      }
+    }
+
+    // Create user
+    const [newUser] = await db.insert(users).values({
+      email: userData.email,
+      passwordHash,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      phone: userData.phone,
+      referralCode,
+      referredBy: userData.referredBy || null,
+    }).returning();
+
+    return newUser;
+  }
+
+  async validateUserPassword(email: string, password: string): Promise<User | null> {
+    const user = await this.getUserByEmail(email);
+    if (!user) return null;
+
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    return isValid ? user : null;
+  }
+
+  private generateReferralCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
   }
 
   async upsertUser(user: UpsertUser): Promise<User> {
