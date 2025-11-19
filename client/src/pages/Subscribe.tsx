@@ -12,7 +12,7 @@ import { Wallet, Building2, Upload, CheckCircle2 } from "lucide-react";
 import type { SubscriptionPlan, PaymentSettings } from "@shared/schema";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
@@ -50,10 +50,23 @@ export default function Subscribe() {
 
   const submitPaymentMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return await apiRequest("/api/payments", {
+      const res = await fetch("/api/payments", {
         method: "POST",
         body: data,
+        credentials: "include",
       });
+      
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: "Failed to submit payment" }));
+        throw new Error(error.message || "Failed to submit payment");
+      }
+      
+      // Handle empty response or JSON response
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return res.json();
+      }
+      return undefined;
     },
     onSuccess: () => {
       setStep(3);

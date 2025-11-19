@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { Save } from "lucide-react";
 
 const paymentSettingsSchema = z.object({
@@ -88,10 +88,27 @@ export default function AdminSettings() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: PaymentSettingsForm) => {
-      return await apiRequest("/api/admin/payment-settings", {
+      const res = await fetch("/api/admin/payment-settings", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
+        credentials: "include",
       });
+      
+      if (!res.ok) {
+        // Store the response for error handling
+        const error: any = new Error("Failed to save settings");
+        error.response = res;
+        throw error;
+      }
+      
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return res.json();
+      }
+      return undefined;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payment-settings"] });
@@ -100,7 +117,48 @@ export default function AdminSettings() {
         description: language === "ar" ? "تم حفظ إعدادات الدفع بنجاح" : "Payment settings saved successfully",
       });
     },
-    onError: (error: any) => {
+    onError: async (error: any) => {
+      // Try to get the response and parse validation errors
+      if (error.response) {
+        try {
+          const errorData = await error.response.json();
+          
+          // Handle Zod validation errors
+          if (errorData.issues && Array.isArray(errorData.issues)) {
+            let hasFieldErrors = false;
+            
+            errorData.issues.forEach((issue: any) => {
+              // Only handle simple, single-level field paths
+              if (issue.path && issue.path.length === 1) {
+                const fieldName = issue.path[0] as keyof PaymentSettingsForm;
+                
+                // Verify field exists in form before setting error
+                if (fieldName in form.getValues()) {
+                  form.setError(fieldName, {
+                    type: "server",
+                    message: issue.message,
+                  });
+                  hasFieldErrors = true;
+                }
+              }
+            });
+            
+            if (hasFieldErrors) {
+              toast({
+                title: language === "ar" ? "خطأ في التحقق" : "Validation Error",
+                description: language === "ar" 
+                  ? "يرجى التحقق من الحقول المميزة" 
+                  : "Please check the highlighted fields",
+                variant: "destructive",
+              });
+              return;
+            }
+          }
+        } catch (e) {
+          // Fall through to generic error
+        }
+      }
+      
       toast({
         title: language === "ar" ? "خطأ" : "Error",
         description: error.message || "Failed to save settings",
