@@ -20,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus, Edit, Trash2, Video } from "lucide-react";
-import type { Course, Lesson } from "@shared/schema";
+import type { Course, Lesson, SubscriptionPlan } from "@shared/schema";
 import { insertLessonSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +55,10 @@ export default function AdminCourses() {
     enabled: !!selectedCourseId,
   });
 
+  const { data: plans } = useQuery<SubscriptionPlan[]>({
+    queryKey: ["/api/subscription-plans"],
+  });
+
   const form = useForm({
     defaultValues: {
       titleEn: "",
@@ -67,6 +71,8 @@ export default function AdminCourses() {
       instructorEn: "",
       instructorAr: "",
       duration: "8",
+      thumbnailUrl: "",
+      requiredPlanId: "",
     },
   });
 
@@ -165,6 +171,8 @@ export default function AdminCourses() {
       level: parseInt(data.level),
       price: parseFloat(data.price),
       duration: parseInt(data.duration),
+      requiredPlanId: data.requiredPlanId || null,
+      thumbnailUrl: data.thumbnailUrl || null,
     });
   };
 
@@ -369,6 +377,75 @@ export default function AdminCourses() {
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="thumbnailUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Thumbnail URL</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="https://example.com/thumbnail.jpg"
+                          data-testid="input-thumbnail-url"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="requiredPlanId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Required Subscription Plan (Optional)</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-required-plan">
+                            <SelectValue placeholder="Select a plan or leave empty for free access" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">No plan required</SelectItem>
+                          {plans?.map((plan) => (
+                            <SelectItem key={plan.id} value={plan.id}>
+                              {language === "ar" ? plan.nameAr : plan.nameEn} - ${plan.price}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="isFree"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Free Course</FormLabel>
+                        <div className="text-sm text-muted-foreground">
+                          Make this course completely free for all users
+                        </div>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-is-free"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
 
                 <Button
                   type="submit"
