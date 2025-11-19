@@ -47,10 +47,12 @@ Preferred communication style: Simple, everyday language.
 - Error handling middleware with structured logging
 
 **Authentication & Authorization**
-- Replit OpenID Connect (OIDC) integration via Passport.js
+- Email/password authentication with bcrypt hashing (10 rounds)
+- Session-based authentication with PostgreSQL session store
+- Session fixation prevention via session regeneration
 - Role-based access control (user/admin roles)
-- Session management with connect-pg-simple
 - Protected routes with authentication and admin middleware
+- Password hash sanitization in all API responses
 
 **API Structure**
 - RESTful endpoints organized by resource type
@@ -72,7 +74,7 @@ Preferred communication style: Simple, everyday language.
 - Schema-first approach with TypeScript type inference
 
 **Schema Design**
-- Users: OIDC integration fields, roles, subscription status, referral system
+- Users: Email/password auth, phone number, roles, subscription status, referral system
 - Courses: Multi-level system (Level 1-3), bilingual content, pricing
 - Lessons: Sequential ordering, video URLs, access control, duration tracking
 - Subscription Plans: Tiered pricing, feature lists, duration-based
@@ -91,9 +93,10 @@ Preferred communication style: Simple, everyday language.
 ### External Dependencies
 
 **Authentication**
-- Replit OIDC provider for user authentication
-- OpenID Connect client library for OAuth flows
-- Passport.js strategy implementation
+- Bcrypt for password hashing and validation
+- Express-session for session management
+- Zod for request validation and sanitization
+- Session regeneration for security
 
 **Database**
 - Neon serverless PostgreSQL for production database hosting

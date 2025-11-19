@@ -49,6 +49,13 @@ function Router() {
 
           {/* Admin Routes */}
           <Route path="/admin">
+            {() => {
+              // Redirect /admin to /admin/dashboard
+              window.location.href = "/admin/dashboard";
+              return null;
+            }}
+          </Route>
+          <Route path="/admin/dashboard">
             {() => (
               <AdminLayout>
                 <AdminDashboard />

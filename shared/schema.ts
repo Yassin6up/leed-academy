@@ -93,6 +93,7 @@ export const courses = pgTable("courses", {
   level: integer("level").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).default("0"),
   isFree: boolean("is_free").default(false),
+  requiredPlanId: varchar("required_plan_id").references(() => subscriptionPlans.id),
   thumbnailUrl: varchar("thumbnail_url"),
   instructorEn: varchar("instructor_en"),
   instructorAr: varchar("instructor_ar"),
@@ -119,18 +120,23 @@ export const lessons = pgTable("lessons", {
   descriptionEn: text("description_en"),
   descriptionAr: text("description_ar"),
   videoUrl: varchar("video_url"),
+  videoFilePath: varchar("video_file_path"),
+  thumbnailUrl: varchar("thumbnail_url"),
   duration: integer("duration"),
   order: integer("order").notNull(),
   requiresPrevious: boolean("requires_previous").default(true),
   isFree: boolean("is_free").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertLessonSchema = createInsertSchema(lessons).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 }).extend({
-  videoUrl: z.string().url("Must be a valid URL").min(1, "Video URL is required"),
+  videoUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  videoFilePath: z.string().optional(),
   titleEn: z.string().min(1, "English title is required"),
   titleAr: z.string().min(1, "Arabic title is required"),
 });
@@ -160,6 +166,7 @@ export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
+  planId: varchar("plan_id").references(() => subscriptionPlans.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   method: varchar("method", { length: 20 }).notNull(),
   currency: varchar("currency", { length: 10 }).default("USD"),
@@ -168,14 +175,18 @@ export const payments = pgTable("payments", {
   transactionHash: varchar("transaction_hash"),
   status: varchar("status", { length: 20 }).notNull().default("pending"),
   adminNotes: text("admin_notes"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   reviewedAt: timestamp("reviewed_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertPaymentSchema = createInsertSchema(payments).omit({
   id: true,
   createdAt: true,
   reviewedAt: true,
+  updatedAt: true,
+  reviewedBy: true,
 });
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type Payment = typeof payments.$inferSelect;
