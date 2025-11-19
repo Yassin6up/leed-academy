@@ -662,6 +662,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/admin/meetings/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const meeting = await storage.updateMeeting(req.params.id, req.body);
+      res.json(meeting);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/meetings/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteMeeting(req.params.id);
+      res.json({ message: "Meeting deleted" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

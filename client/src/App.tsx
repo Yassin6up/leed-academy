@@ -24,6 +24,7 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminCourses from "@/pages/admin/AdminCourses";
 import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminMeetings from "@/pages/admin/AdminMeetings";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -95,9 +96,7 @@ function Router() {
           <Route path="/admin/meetings">
             {() => (
               <AdminLayout>
-                <div className="p-8">
-                  <h1 className="text-3xl font-heading font-bold">Zoom Meetings</h1>
-                </div>
+                <AdminMeetings />
               </AdminLayout>
             )}
           </Route>
