@@ -165,10 +165,12 @@ export default function AdminMeetings() {
     setDialogOpen(true);
   };
 
-  const handleDialogClose = () => {
-    setDialogOpen(false);
-    setEditingMeeting(null);
-    form.reset();
+  const handleDialogChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingMeeting(null);
+      form.reset();
+    }
   };
 
   // Sort meetings by date (upcoming first, then past)
@@ -199,7 +201,7 @@ export default function AdminMeetings() {
         >
           {language === "ar" ? "إدارة اجتماعات Zoom" : "Zoom Meetings Management"}
         </h1>
-        <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+        <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-meeting">
               <Plus className="h-4 w-4 mr-2" />
@@ -428,7 +430,7 @@ export default function AdminMeetings() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleDialogClose}
+                    onClick={() => handleDialogChange(false)}
                     data-testid="button-cancel"
                   >
                     {language === "ar" ? "إلغاء" : "Cancel"}
