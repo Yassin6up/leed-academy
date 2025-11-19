@@ -44,10 +44,15 @@ function updateUserSession(
   user: any,
   tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
 ) {
-  user.claims = tokens.claims();
+  const claims = tokens.claims() || {};
+  user.claims = claims;
   user.access_token = tokens.access_token;
   user.refresh_token = tokens.refresh_token;
-  user.expires_at = user.claims?.exp;
+  // Prefer claims.exp, fallback to tokens.expires_at or calculate from expires_in
+  user.expires_at = claims?.exp || 
+    (tokens as any).expires_at || 
+    (tokens.expires_in ? Math.floor(Date.now() / 1000) + tokens.expires_in : undefined);
+  return user;
 }
 
 function generateReferralCode(): string {
@@ -72,7 +77,7 @@ async function upsertUser(claims: any, referredByCode?: string) {
     }
   }
 
-  await storage.upsertUser({
+  return await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
@@ -98,21 +103,31 @@ export async function setupAuth(app: Express) {
     done: passport.AuthenticateCallback
   ) => {
     try {
-      const user = {};
-      updateUserSession(user, tokenSet);
-      
       // Check for referral intent in session
       const referralIntent = req?.session?.referralIntent;
       
-      // Use userInfo for richer profile data, await before proceeding
+      // Prefer userInfo for richer profile data, fallback to claims
       const claims = tokenSet.claims();
-      await upsertUser(claims, referralIntent);
+      const userData = {
+        sub: userInfo?.sub || claims?.sub,
+        email: userInfo?.email || claims?.email,
+        first_name: userInfo?.first_name || claims?.first_name,
+        last_name: userInfo?.last_name || claims?.last_name,
+        profile_image_url: userInfo?.profile_image_url || claims?.profile_image_url,
+      };
+      
+      // Await upsertUser and capture the persisted user
+      const persistedUser = await upsertUser(userData, referralIntent);
+      
+      // Merge persisted profile with token metadata
+      const user = updateUserSession({ ...persistedUser }, tokenSet);
       
       // Clear referral intent only after successful persistence
       if (req?.session?.referralIntent) {
         delete req.session.referralIntent;
       }
       
+      // Pass merged user object to done so req.user has both profile and token data
       done(null, user);
     } catch (error) {
       console.error("Error in OIDC verify callback:", error);

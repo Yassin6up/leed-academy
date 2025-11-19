@@ -43,6 +43,29 @@ The application uses **Replit OIDC (OpenID Connect)** for secure authentication.
 - **User** (default): Access to courses, dashboard, subscription
 - **Admin**: Full access to admin panel + all user features
 
+### Session Management & Token Expiry:
+
+The authentication system uses robust fallback logic to ensure reliable session expiry handling across different OIDC providers:
+
+**Expiry Fallback Chain:**
+1. **Primary**: `claims.exp` from ID token
+2. **Fallback 1**: `tokens.expires_at` from token response
+3. **Fallback 2**: Calculated from `tokens.expires_in` (current time + expires_in seconds)
+4. **Final**: `undefined` (if all methods fail)
+
+This ensures that even providers with minimal token metadata maintain valid sessions for downstream authentication checks (`isAuthenticated`, `/api/auth/user`).
+
+**Session Data Structure:**
+```javascript
+req.user = {
+  // Profile data from database
+  id, email, firstName, lastName, profileImageUrl, 
+  referralCode, referredBy, role, 
+  // Token metadata
+  claims, access_token, refresh_token, expires_at
+}
+```
+
 ---
 
 ## Routes & Pages
