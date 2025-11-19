@@ -409,6 +409,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Admin analytics endpoint
+  app.get("/api/admin/analytics", isAuthenticated, requireAdmin, async (_req, res) => {
+    try {
+      const analytics = await storage.getAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
   app.get("/api/admin/users", isAuthenticated, requireAdmin, async (_req, res) => {
     const users = await storage.getAllUsers();
     res.json(users);
