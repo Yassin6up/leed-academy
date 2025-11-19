@@ -27,6 +27,14 @@ Preferred communication style: Simple, everyday language.
 - Custom theming system supporting light/dark modes
 - RTL/LTR layout support for Arabic/English bilingual interface
 
+**User Dashboard Navigation**
+- Tab-based interface using Shadcn Tabs component (replaced sidebar navigation)
+- Single /dashboard route with URL query parameter support (?tab=courses, ?tab=subscription, etc.)
+- Deep linking support for direct access to specific tabs
+- Browser back/forward navigation synchronized with tab state via wouter location hooks
+- Five main sections: My Courses, Subscription, Join Group, Settings, Ratings
+- URL state management with useEffect listening to location changes
+
 **State Management**
 - React Query for server state with optimistic updates
 - React Context for theme and language preferences
