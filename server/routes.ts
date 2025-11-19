@@ -844,13 +844,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.patch("/api/admin/courses/:id", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const course = await storage.updateCourse(req.params.id, req.body);
-      res.json(course);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
+  app.patch("/api/admin/courses/:id", isAuthenticated, requireAdmin, (req, res) => {
+    courseUpload.fields([
+      { name: "thumbnail", maxCount: 1 },
+    ])(req, res, async (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "File size exceeds 2GB limit" });
+        }
+        return res.status(400).json({ message: `Upload error: ${err.message}` });
+      }
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const uploadedFiles: string[] = [];
+
+      try {
+        const currentCourse = await storage.getCourse(req.params.id);
+        if (!currentCourse) {
+          return res.status(404).json({ message: "Course not found" });
+        }
+
+        if (files.thumbnail && files.thumbnail[0]) {
+          if (!validateFileSize(files.thumbnail[0].size, MAX_THUMBNAIL_SIZE)) {
+            throw new Error("Thumbnail size exceeds 5MB limit");
+          }
+          uploadedFiles.push(files.thumbnail[0].path);
+        }
+
+        const courseData: any = {
+          ...req.body,
+          level: req.body.level ? parseInt(req.body.level) : undefined,
+          price: req.body.price,
+          duration: req.body.duration ? parseInt(req.body.duration) : undefined,
+          isFree: req.body.isFree === "true" || req.body.isFree === true,
+          requiredPlanId: req.body.requiredPlanId === "null" || req.body.requiredPlanId === "" ? null : req.body.requiredPlanId,
+        };
+
+        if (files.thumbnail && files.thumbnail[0]) {
+          const thumbnailFile = files.thumbnail[0];
+          const courseDir = getCourseUploadDir(req.params.id);
+          const thumbnailDir = path.join(courseDir, "thumbnails");
+          ensureDir(thumbnailDir);
+          
+          const extension = path.extname(thumbnailFile.originalname);
+          const newFilename = `${Date.now()}-${slugify(req.body.titleEn || "course")}${extension}`;
+          const finalPath = path.join(thumbnailDir, newFilename);
+          
+          fs.renameSync(thumbnailFile.path, finalPath);
+          
+          courseData.thumbnailUrl = `/uploads/courses/${req.params.id}/thumbnails/${newFilename}`;
+        } else {
+          courseData.thumbnailUrl = currentCourse.thumbnailUrl;
+        }
+
+        const course = await storage.updateCourse(req.params.id, courseData);
+        res.json(course);
+      } catch (error: any) {
+        uploadedFiles.forEach(file => {
+          try {
+            if (fs.existsSync(file)) {
+              fs.unlinkSync(file);
+            }
+          } catch {}
+        });
+
+        res.status(400).json({ message: error.message || "Failed to update course" });
+      }
+    });
   });
 
   app.delete("/api/admin/courses/:id", isAuthenticated, requireAdmin, async (req, res) => {

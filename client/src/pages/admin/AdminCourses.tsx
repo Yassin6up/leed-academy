@@ -49,12 +49,16 @@ export default function AdminCourses() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [createThumbnailFile, setCreateThumbnailFile] = useState<File | null>(null);
+  const [createThumbnailPreview, setCreateThumbnailPreview] = useState<string | null>(null);
+  const [createUploadProgress, setCreateUploadProgress] = useState<number>(0);
+  const [editThumbnailFile, setEditThumbnailFile] = useState<File | null>(null);
+  const [editThumbnailPreview, setEditThumbnailPreview] = useState<string | null>(null);
+  const [editUploadProgress, setEditUploadProgress] = useState<number>(0);
   const [lessonVideoFile, setLessonVideoFile] = useState<File | null>(null);
   const [lessonUploadProgress, setLessonUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: courses, isLoading } = useQuery<Course[]>({
@@ -168,7 +172,7 @@ export default function AdminCourses() {
       const formData = new FormData();
       
       Object.keys(data).forEach((key) => {
-        if (key !== "thumbnail" && data[key] !== null && data[key] !== undefined) {
+        if (key !== "thumbnail" && data[key] !== null && data[key] !== undefined && data[key] !== "") {
           formData.append(key, data[key].toString());
         }
       });
@@ -205,7 +209,6 @@ export default function AdminCourses() {
       setThumbnailFile(null);
       setThumbnailPreview(null);
       setUploadProgress(0);
-      form.reset();
     },
     onError: (error: any) => {
       toast({
@@ -415,6 +418,8 @@ export default function AdminCourses() {
 
   const openEditDialog = (course: Course) => {
     setEditingCourse(course);
+    setThumbnailFile(null);
+    setUploadProgress(0);
     form.reset({
       titleEn: course.titleEn,
       titleAr: course.titleAr,
@@ -783,7 +788,18 @@ export default function AdminCourses() {
       </div>
 
       {/* Edit Course Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog 
+        open={editDialogOpen} 
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) {
+            setThumbnailFile(null);
+            setThumbnailPreview(null);
+            setUploadProgress(0);
+            setEditingCourse(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
