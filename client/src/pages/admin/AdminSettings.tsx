@@ -25,8 +25,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { queryClient } from "@/lib/queryClient";
-import { Save } from "lucide-react";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Save, MessageCircle } from "lucide-react";
 
 const paymentSettingsSchema = z.object({
   bankName: z.string().optional(),
@@ -43,7 +43,13 @@ const paymentSettingsSchema = z.object({
   paymentInstructionsAr: z.string().optional(),
 });
 
+const socialLinksSchema = z.object({
+  telegramGroupLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  whatsappGroupLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+});
+
 type PaymentSettingsForm = z.infer<typeof paymentSettingsSchema>;
+type SocialLinksForm = z.infer<typeof socialLinksSchema>;
 
 export default function AdminSettings() {
   const { language } = useLanguage();
@@ -68,6 +74,11 @@ export default function AdminSettings() {
     enabled: isAuthenticated && isAdmin,
   });
 
+  const { data: platformSettings, isLoading: platformSettingsLoading } = useQuery<Array<{ key: string; value: string }>>({
+    queryKey: ["/api/settings"],
+    enabled: isAuthenticated && isAdmin,
+  });
+
   const form = useForm<PaymentSettingsForm>({
     resolver: zodResolver(paymentSettingsSchema),
     values: settings || {
@@ -85,6 +96,25 @@ export default function AdminSettings() {
       paymentInstructionsAr: "",
     },
   });
+
+  const socialLinksForm = useForm<SocialLinksForm>({
+    resolver: zodResolver(socialLinksSchema),
+    defaultValues: {
+      telegramGroupLink: "",
+      whatsappGroupLink: "",
+    },
+  });
+
+  useEffect(() => {
+    if (platformSettings) {
+      const telegram = platformSettings.find(s => s.key === "telegram_group_link");
+      const whatsapp = platformSettings.find(s => s.key === "whatsapp_group_link");
+      socialLinksForm.reset({
+        telegramGroupLink: telegram?.value || "",
+        whatsappGroupLink: whatsapp?.value || "",
+      });
+    }
+  }, [platformSettings, socialLinksForm]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: PaymentSettingsForm) => {
@@ -171,6 +201,35 @@ export default function AdminSettings() {
     updateMutation.mutate(data);
   };
 
+  const updateSocialLinksMutation = useMutation({
+    mutationFn: async (data: SocialLinksForm) => {
+      return await apiRequest("/api/settings", "POST", {
+        settings: [
+          { key: "telegram_group_link", value: data.telegramGroupLink || "" },
+          { key: "whatsapp_group_link", value: data.whatsappGroupLink || "" },
+        ],
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({
+        title: language === "ar" ? "تم الحفظ" : "Saved",
+        description: language === "ar" ? "تم حفظ روابط المجموعات بنجاح" : "Social group links saved successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.message || "Failed to save social links",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSocialLinksSubmit = (data: SocialLinksForm) => {
+    updateSocialLinksMutation.mutate(data);
+  };
+
   if (isLoading || !isAuthenticated || !isAdmin) {
     return (
       <div className="p-8">
@@ -180,16 +239,103 @@ export default function AdminSettings() {
   }
 
   return (
-    <div className="p-8">
-      <h1
-        className="text-3xl font-heading font-bold text-foreground mb-8"
-        data-testid="text-admin-settings-title"
-      >
-        {language === "ar" ? "إعدادات الدفع" : "Payment Settings"}
-      </h1>
+    <div className="p-8 space-y-8">
+      <div>
+        <h1
+          className="text-3xl font-heading font-bold text-foreground mb-2"
+          data-testid="text-admin-settings-title"
+        >
+          {language === "ar" ? "إعدادات النظام" : "System Settings"}
+        </h1>
+        <p className="text-muted-foreground">
+          {language === "ar" 
+            ? "إدارة إعدادات المنصة والدفع والمجموعات الاجتماعية" 
+            : "Manage platform, payment, and social group settings"}
+        </p>
+      </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      {/* Social Group Links */}
+      <Form {...socialLinksForm}>
+        <form onSubmit={socialLinksForm.handleSubmit(onSocialLinksSubmit)} className="space-y-6">
+          <Card data-testid="card-social-links">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                {language === "ar" ? "روابط المجموعات الاجتماعية" : "Social Group Links"}
+              </CardTitle>
+              <CardDescription>
+                {language === "ar"
+                  ? "أضف روابط مجموعات تيليجرام وواتساب لينضم إليها المستخدمون"
+                  : "Add Telegram and WhatsApp group links for users to join"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={socialLinksForm.control}
+                name="telegramGroupLink"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{language === "ar" ? "رابط مجموعة تيليجرام" : "Telegram Group Link"}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="https://t.me/..."
+                        data-testid="input-telegram-link"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={socialLinksForm.control}
+                name="whatsappGroupLink"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{language === "ar" ? "رابط مجموعة واتساب" : "WhatsApp Group Link"}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="https://chat.whatsapp.com/..."
+                        data-testid="input-whatsapp-link"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={updateSocialLinksMutation.isPending || platformSettingsLoading}
+              className="min-w-32"
+              data-testid="button-save-social-links"
+            >
+              {updateSocialLinksMutation.isPending ? (
+                language === "ar" ? "جاري الحفظ..." : "Saving..."
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {language === "ar" ? "حفظ الروابط" : "Save Links"}
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Form>
+
+      {/* Payment Settings */}
+      <div>
+        <h2 className="text-2xl font-heading font-bold text-foreground mb-4">
+          {language === "ar" ? "إعدادات الدفع" : "Payment Settings"}
+        </h2>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Bank Information */}
           <Card data-testid="card-bank-info">
             <CardHeader>
@@ -440,6 +586,7 @@ export default function AdminSettings() {
           </div>
         </form>
       </Form>
+      </div>
     </div>
   );
 }

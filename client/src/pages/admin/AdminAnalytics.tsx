@@ -84,33 +84,33 @@ export default function AdminAnalytics() {
     );
   }
 
-  const totalRevenue = analytics.revenueTrends.daily.reduce(
+  const totalRevenue = analytics.revenueTrends?.daily?.reduce(
     (sum, item) => sum + item.amount,
     0
-  );
-  const totalUsers = analytics.userRegistrationTrends.daily.reduce(
+  ) || 0;
+  const totalUsers = analytics.userRegistrationTrends?.daily?.reduce(
     (sum, item) => sum + item.count,
     0
-  );
-  const totalEnrollments = analytics.courseEnrollments.byCourse.reduce(
+  ) || 0;
+  const totalEnrollments = analytics.courseEnrollments?.byCourse?.reduce(
     (sum, item) => sum + item.enrollments,
     0
-  );
+  ) || 0;
 
   const paymentStatusData = [
     {
       name: language === "ar" ? "قيد الانتظار" : "Pending",
-      value: analytics.paymentStatusBreakdown.pending,
+      value: analytics.paymentStatusBreakdown?.pending || 0,
       color: COLORS[3],
     },
     {
       name: language === "ar" ? "موافق عليها" : "Approved",
-      value: analytics.paymentStatusBreakdown.approved,
+      value: analytics.paymentStatusBreakdown?.approved || 0,
       color: COLORS[0],
     },
     {
       name: language === "ar" ? "مرفوضة" : "Rejected",
-      value: analytics.paymentStatusBreakdown.rejected,
+      value: analytics.paymentStatusBreakdown?.rejected || 0,
       color: COLORS[2],
     },
   ];
@@ -180,7 +180,7 @@ export default function AdminAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {analytics.courseEnrollments.byCourse.length}
+              {analytics.courseEnrollments?.byCourse?.length || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               {language === "ar" ? "مع تسجيلات" : "With enrollments"}
@@ -200,7 +200,7 @@ export default function AdminAnalytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={analytics.revenueTrends.daily}>
+              <LineChart data={analytics.revenueTrends?.daily || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
@@ -239,7 +239,7 @@ export default function AdminAnalytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analytics.revenueTrends.weekly}>
+              <BarChart data={analytics.revenueTrends?.weekly || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="week" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
@@ -261,7 +261,7 @@ export default function AdminAnalytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={analytics.userRegistrationTrends.daily}>
+              <LineChart data={analytics.userRegistrationTrends?.daily || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
@@ -333,7 +333,7 @@ export default function AdminAnalytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analytics.courseEnrollments.byLevel}>
+              <BarChart data={analytics.courseEnrollments?.byLevel || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="level"
@@ -364,7 +364,7 @@ export default function AdminAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics.topCourses.slice(0, 5).map((course, index) => (
+              {(analytics.topCourses || []).slice(0, 5).map((course, index) => (
                 <div
                   key={course.courseId}
                   className="flex items-center justify-between"

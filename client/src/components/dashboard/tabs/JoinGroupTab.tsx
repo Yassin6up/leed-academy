@@ -12,8 +12,8 @@ export default function JoinGroup() {
     queryKey: ["/api/settings"],
   });
 
-  const telegramLink = settingsData?.find(s => s.key === "telegram_link")?.value;
-  const whatsappLink = settingsData?.find(s => s.key === "whatsapp_link")?.value;
+  const telegramLink = settingsData?.find(s => s.key === "telegram_group_link")?.value;
+  const whatsappLink = settingsData?.find(s => s.key === "whatsapp_group_link")?.value;
 
   if (isLoading) {
     return (
