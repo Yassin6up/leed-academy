@@ -255,6 +255,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("language", language);
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    
+    // Set language class on body for font styling
+    if (language === "ar") {
+      document.body.classList.add("lang-ar");
+      document.body.classList.remove("lang-en");
+    } else {
+      document.body.classList.add("lang-en");
+      document.body.classList.remove("lang-ar");
+    }
   }, [language]);
 
   const setLanguage = (lang: Language) => {

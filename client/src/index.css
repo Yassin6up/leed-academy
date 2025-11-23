@@ -4,8 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Arabic Font */
-html[lang="ar"] {
+/* Arabic Font - Apply to all elements when Arabic is active */
+body.lang-ar,
+body.lang-ar * {
+  font-family: Cairo, sans-serif !important;
+}
+
+/* Ensure Cairo font is used for Arabic text */
+html[dir="rtl"] {
   font-family: Cairo, sans-serif;
 }
 
