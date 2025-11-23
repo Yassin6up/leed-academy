@@ -1533,6 +1533,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Secure video streaming endpoint with authentication
+  app.get("/api/videos/:lessonId/stream", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      const { lessonId } = req.params;
+
+      // Get lesson details
+      const lesson = await storage.getLesson(lessonId);
+      if (!lesson) {
+        return res.status(404).json({ message: "Lesson not found" });
+      }
+
+      // Get course to verify access
+      const course = await storage.getCourse(lesson.courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      // Check user subscription/access
+      const user = await storage.getUser(userId);
+      const userSub = await storage.getUserSubscription(userId);
+
+      // Allow access if user has active subscription or is admin
+      const hasAccess = user?.role === "admin" || userSub?.status === "active";
+      if (!hasAccess) {
+        return res.status(403).json({ message: "No access to this course" });
+      }
+
+      // Serve video file with security headers
+      if (lesson.videoFilePath) {
+        const videoPath = path.join(process.cwd(), lesson.videoFilePath);
+
+        // Set security headers to prevent caching and downloading
+        res.setHeader("Content-Type", "video/mp4");
+        res.setHeader("Content-Security-Policy", "default-src 'self'");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("Content-Disposition", "inline; filename=video.mp4");
+
+        // Stream video file
+        res.sendFile(videoPath);
+      } else if (lesson.videoUrl) {
+        // If external URL, redirect securely
+        res.json({ url: lesson.videoUrl });
+      } else {
+        return res.status(404).json({ message: "Video not found" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

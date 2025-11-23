@@ -34,6 +34,36 @@ export default function CourseDetail() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [lastProgressUpdate, setLastProgressUpdate] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [videoSrc, setVideoSrc] = useState<string>("");
+
+  // Fetch secure video URL
+  const getSecureVideoUrl = async (lessonId: string) => {
+    try {
+      const response = await fetch(`/api/videos/${lessonId}/stream`);
+      if (!response.ok) return "";
+      
+      // For streaming, use the secure endpoint directly
+      return `/api/videos/${lessonId}/stream`;
+    } catch (error) {
+      console.error("Error fetching video:", error);
+      return "";
+    }
+  };
+
+  // Update video source when lesson changes
+  const { data: currentLesson } = useQuery({
+    queryKey: ["/api/courses", params?.id, "lessons", currentLessonIndex],
+    enabled: !!params?.id && !!lessons && lessons.length > 0,
+    queryFn: async () => {
+      if (!lessons || !lessons[currentLessonIndex]) return null;
+      const lesson = lessons[currentLessonIndex];
+      
+      // Get secure video URL
+      const url = await getSecureVideoUrl(lesson.id);
+      setVideoSrc(url);
+      return lesson;
+    },
+  });
 
   // Prevent video download and right-click
   const handleVideoContextMenu = (e: React.MouseEvent) => {
@@ -295,7 +325,7 @@ export default function CourseDetail() {
                 ref={videoRef}
                 className="w-full aspect-video pointer-events-auto"
                 controls
-                src={currentLesson?.videoUrl || undefined}
+                src={videoSrc}
                 data-testid="video-player"
                 controlsList="nodownload"
                 onContextMenu={handleVideoContextMenu}
