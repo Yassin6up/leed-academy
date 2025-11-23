@@ -14,6 +14,7 @@ import {
   settings,
   referralTransactions,
   withdrawalRequests,
+  adminLogs,
   type User,
   type UpsertUser,
   type Course,
@@ -41,6 +42,8 @@ import {
   type InsertReferralTransaction,
   type WithdrawalRequest,
   type InsertWithdrawalRequest,
+  type AdminLog,
+  type InsertAdminLog,
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -150,6 +153,12 @@ export interface IStorage {
   getAllWithdrawalRequests(): Promise<WithdrawalRequest[]>;
   approveWithdrawal(withdrawalId: string, adminNotes?: string): Promise<WithdrawalRequest>;
   rejectWithdrawal(withdrawalId: string, adminNotes?: string): Promise<WithdrawalRequest>;
+
+  // Admin Logs methods
+  createAdminLog(log: InsertAdminLog): Promise<AdminLog>;
+  getAllAdminLogs(): Promise<AdminLog[]>;
+  getAdminLogsByDateRange(startDate: Date, endDate: Date): Promise<AdminLog[]>;
+  getAdminLogsByPage(page: string): Promise<AdminLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -903,6 +912,35 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updated;
+  }
+
+  // Admin Logs methods
+  async createAdminLog(log: InsertAdminLog): Promise<AdminLog> {
+    const [newLog] = await db.insert(adminLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getAllAdminLogs(): Promise<AdminLog[]> {
+    return await db.select().from(adminLogs).orderBy(desc(adminLogs.createdAt));
+  }
+
+  async getAdminLogsByDateRange(startDate: Date, endDate: Date): Promise<AdminLog[]> {
+    return await db
+      .select()
+      .from(adminLogs)
+      .where(and(
+        (col) => col.gte(adminLogs.createdAt, startDate),
+        (col) => col.lte(adminLogs.createdAt, endDate)
+      ))
+      .orderBy(desc(adminLogs.createdAt));
+  }
+
+  async getAdminLogsByPage(page: string): Promise<AdminLog[]> {
+    return await db
+      .select()
+      .from(adminLogs)
+      .where(eq(adminLogs.page, page))
+      .orderBy(desc(adminLogs.createdAt));
   }
 }
 

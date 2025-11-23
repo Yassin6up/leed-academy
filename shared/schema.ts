@@ -435,3 +435,21 @@ export const meetingsRelations = relations(meetings, ({ one }) => ({
     references: [courses.id],
   }),
 }));
+
+// Admin Logs table
+export const adminLogs = pgTable("admin_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull().references(() => users.id),
+  action: varchar("action", { length: 100 }).notNull(), // create, update, delete, approve, reject, etc
+  page: varchar("page", { length: 100 }).notNull(), // payments, users, withdrawals, courses, pricing, etc
+  description: text("description"),
+  details: jsonb("details"), // Store JSON details of what was changed
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
+export type AdminLog = typeof adminLogs.$inferSelect;
