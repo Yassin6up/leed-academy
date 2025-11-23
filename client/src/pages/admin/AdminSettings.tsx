@@ -231,7 +231,7 @@ export default function AdminSettings() {
     updateSocialLinksMutation.mutate(data);
   };
 
-  if (isLoading || !isAuthenticated || !isAdmin) {
+  if (isLoading || !isAuthenticated || user?.role !== "admin") {
     return (
       <div className="p-8">
         <div className="h-96 bg-muted animate-pulse rounded-lg" />
