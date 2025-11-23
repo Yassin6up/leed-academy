@@ -1535,7 +1535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Secure video streaming endpoint with authentication
+  // Secure video streaming endpoint with authentication (no URL exposure)
   app.get("/api/videos/:lessonId/stream", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.session as any)?.userId;
@@ -1544,13 +1544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get lesson details
       const lesson = await storage.getLesson(lessonId);
       if (!lesson) {
-        return res.status(404).json({ message: "Lesson not found" });
-      }
-
-      // Get course to verify access
-      const course = await storage.getCourse(lesson.courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
+        return res.status(404).send("Not found");
       }
 
       // Check user subscription/access
@@ -1560,34 +1554,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Allow access if user has active subscription or is admin
       const hasAccess = user?.role === "admin" || userSub?.status === "active";
       if (!hasAccess) {
-        return res.status(403).json({ message: "No access to this course" });
+        return res.status(403).send("Forbidden");
       }
 
-      // Handle external URL
-      if (lesson.videoUrl) {
-        return res.json({ url: lesson.videoUrl });
-      }
-
-      // Serve local video file
+      // Stream video directly (no JSON response with URL)
       if (lesson.videoFilePath && fs.existsSync(lesson.videoFilePath)) {
-        // Security headers to prevent unauthorized access and downloading
+        // Security headers - MAXIMUM protection against downloading
         res.setHeader("Content-Type", "video/mp4");
-        res.setHeader("Content-Security-Policy", "default-src 'self'; media-src 'self'");
+        res.setHeader("Accept-Ranges", "bytes"); // Allow range requests for seeking
+        res.setHeader("Content-Security-Policy", "default-src 'self'; media-src 'self'; img-src 'self'");
         res.setHeader("X-Content-Type-Options", "nosniff");
-        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, private");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, private, max-age=0");
         res.setHeader("Pragma", "no-cache");
         res.setHeader("Expires", "0");
         res.setHeader("X-Frame-Options", "DENY");
-        res.setHeader("Content-Disposition", "inline; filename=video.mp4");
+        res.setHeader("X-XSS-Protection", "1; mode=block");
+        res.setHeader("Referrer-Policy", "no-referrer");
+        res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+        // Critical: Set to inline and hide filename from browser UI
+        res.setHeader("Content-Disposition", "inline");
         
-        // Stream the video file
-        res.sendFile(lesson.videoFilePath);
+        // Get file size for range request support
+        const stat = fs.statSync(lesson.videoFilePath);
+        const fileSize = stat.size;
+        const range = req.headers.range;
+
+        if (range) {
+          // Handle range requests for seeking (required for video player)
+          const parts = range.replace(/bytes=/, "").split("-");
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+          if (start >= fileSize) {
+            res.status(416).send("Range Not Satisfiable");
+            return;
+          }
+
+          res.status(206);
+          res.setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+          res.setHeader("Content-Length", end - start + 1);
+
+          const stream = fs.createReadStream(lesson.videoFilePath, { start, end });
+          stream.pipe(res);
+        } else {
+          // Stream full video
+          res.setHeader("Content-Length", fileSize);
+          const stream = fs.createReadStream(lesson.videoFilePath);
+          stream.pipe(res);
+        }
       } else {
-        return res.status(404).json({ message: "Video not found" });
+        res.status(404).send("Video not found");
       }
     } catch (error: any) {
       console.error("Video streaming error:", error);
-      res.status(500).json({ message: error.message });
+      res.status(500).send("Server error");
     }
   });
 
