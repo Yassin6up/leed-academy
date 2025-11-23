@@ -18,8 +18,11 @@ import {
   ChevronLeft,
   ChevronRight,
   PlayCircle,
+  Download,
+  FileText,
+  Link as LinkIcon,
 } from "lucide-react";
-import type { Course, Lesson, Progress as UserProgress, Meeting } from "@shared/schema";
+import type { Course, Lesson, Progress as UserProgress, Meeting, CourseResource } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +76,11 @@ export default function CourseDetail() {
 
   const { data: meetings } = useQuery<Meeting[]>({
     queryKey: ["/api/courses", params?.id, "meetings"],
+    enabled: !!params?.id,
+  });
+
+  const { data: resources } = useQuery<CourseResource[]>({
+    queryKey: ["/api/courses", params?.id, "resources"],
     enabled: !!params?.id,
   });
 
@@ -428,15 +436,69 @@ export default function CourseDetail() {
               </TabsContent>
 
               <TabsContent value="resources" className="mt-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-muted-foreground text-center">
-                      {language === "ar"
-                        ? "لا توجد موارد إضافية لهذا الدرس"
-                        : "No additional resources for this lesson"}
-                    </p>
-                  </CardContent>
-                </Card>
+                {resources && resources.length > 0 ? (
+                  <div className="space-y-3">
+                    {resources.map((resource) => (
+                      <Card key={resource.id} className="hover-elevate" data-testid={`card-resource-${resource.id}`}>
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                              {resource.fileType === "link" ? (
+                                <LinkIcon className="h-6 w-6 text-primary" />
+                              ) : (
+                                <FileText className="h-6 w-6 text-primary" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-foreground mb-1 truncate">
+                                {language === "ar" ? resource.titleAr : resource.titleEn}
+                              </h3>
+                              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                                {language === "ar" ? resource.descriptionAr : resource.descriptionEn}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                {resource.fileType !== "link" && resource.fileSize && (
+                                  <>
+                                    <span>{(resource.fileSize / (1024 * 1024)).toFixed(2)} MB</span>
+                                    <span>•</span>
+                                  </>
+                                )}
+                                <span>{resource.fileName}</span>
+                              </div>
+                            </div>
+                            <div className="flex-shrink-0">
+                              {resource.fileType === "link" ? (
+                                <Button asChild size="sm" variant="default" data-testid={`button-open-resource-${resource.id}`}>
+                                  <a href={resource.fileUrl} target="_blank" rel="noopener noreferrer">
+                                    <LinkIcon className="h-4 w-4 mr-2" />
+                                    {language === "ar" ? "فتح" : "Open"}
+                                  </a>
+                                </Button>
+                              ) : (
+                                <Button asChild size="sm" variant="default" data-testid={`button-download-resource-${resource.id}`}>
+                                  <a href={resource.fileUrl} download data-testid={`link-download-${resource.id}`}>
+                                    <Download className="h-4 w-4 mr-2" />
+                                    {language === "ar" ? "تحميل" : "Download"}
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="p-6">
+                      <p className="text-muted-foreground text-center">
+                        {language === "ar"
+                          ? "لا توجد موارد إضافية لهذه الدورة"
+                          : "No additional resources for this course"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="meetings" className="mt-6">

@@ -20,8 +20,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Video } from "lucide-react";
-import type { Course, Lesson, SubscriptionPlan } from "@shared/schema";
+import { Plus, Edit, Trash2, Video, FileText, Link as LinkIcon, X } from "lucide-react";
+import type { Course, Lesson, SubscriptionPlan, CourseResource } from "@shared/schema";
 import { insertLessonSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -48,7 +48,9 @@ export default function AdminCourses() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
+  const [resourceDialogOpen, setResourceDialogOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [selectedResourceCourseId, setSelectedResourceCourseId] = useState<string>("");
   const [createThumbnailFile, setCreateThumbnailFile] = useState<File | null>(null);
   const [createThumbnailPreview, setCreateThumbnailPreview] = useState<string | null>(null);
   const [createUploadProgress, setCreateUploadProgress] = useState<number>(0);
@@ -80,6 +82,11 @@ export default function AdminCourses() {
   const { data: lessons } = useQuery<Lesson[]>({
     queryKey: [`/api/courses/${selectedCourseId}/lessons`],
     enabled: !!selectedCourseId,
+  });
+
+  const { data: resources, refetch: refetchResources } = useQuery<CourseResource[]>({
+    queryKey: [`/api/courses/${selectedResourceCourseId}/resources`],
+    enabled: !!selectedResourceCourseId,
   });
 
   const { data: plans } = useQuery<SubscriptionPlan[]>({
