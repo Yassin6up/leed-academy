@@ -488,8 +488,8 @@ export default function CourseDetail() {
           </div>
         </div>
 
-        {/* Lessons Sidebar */}
-        <div className="fixed right-0 top-[73px] bottom-0 w-80 lg:w-96 bg-background border-l flex flex-col">
+        {/* Lessons Sidebar - Hidden on mobile */}
+        <div className="hidden lg:flex fixed right-0 top-[73px] bottom-0 w-80 xl:w-96 bg-background border-l flex-col">
           <div className="p-4 border-b">
             <h2 className="font-heading font-bold text-foreground mb-2">
               {language === "ar" ? "محتوى الدورة" : "Course Content"}
