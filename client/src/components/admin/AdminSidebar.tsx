@@ -1,5 +1,6 @@
 import { useLanguage } from "@/lib/i18n";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
   Users,
@@ -34,6 +35,7 @@ export function AdminSidebar() {
   const { t, language } = useLanguage();
   const [location, navigate] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -112,17 +114,52 @@ export function AdminSidebar() {
   ];
 
   const systemItems = [
+    ...(user?.role === "admin" ? [{
+      title: language === "ar" ? "إدارة الأدوار" : "Role Management",
+      icon: Users,
+      path: "/admin/roles",
+    }] : []),
     {
       title: language === "ar" ? "السجلات" : "Logs",
       icon: BarChart3,
       path: "/admin/logs",
     },
-    {
+    ...(user?.role === "admin" ? [{
       title: language === "ar" ? "الإعدادات" : "Settings",
       icon: Settings,
       path: "/admin/settings",
-    },
+    }] : []),
   ];
+
+  // Filter business items based on role
+  const getBusinessItems = () => {
+    if (user?.role === "admin") {
+      return businessItems;
+    }
+    if (user?.role === "support") {
+      return businessItems.filter(item => 
+        item.path === "/admin/payments" || 
+        item.path === "/admin/users" || 
+        item.path === "/admin/withdrawals"
+      );
+    }
+    if (user?.role === "manager") {
+      return businessItems.filter(item => item.path !== "/admin/settings");
+    }
+    return [];
+  };
+
+  // Filter content items based on role
+  const getContentItems = () => {
+    if (user?.role === "support") return [];
+    return contentItems;
+  };
+
+  // Filter overview items based on role
+  const getOverviewItems = () => {
+    if (user?.role === "support") return [];
+    return overviewItems;
+  };
 
   return (
     <Sidebar>
@@ -141,13 +178,14 @@ export function AdminSidebar() {
       </SidebarHeader>
       <SidebarContent className="gap-4">
         {/* Overview Section */}
+        {getOverviewItems().length > 0 && (
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-4">
             {language === "ar" ? "نظرة عامة" : "Overview"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {overviewItems.map((item) => (
+              {getOverviewItems().map((item) => (
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton
                     asChild
@@ -166,15 +204,17 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
         {/* Content Management Section */}
+        {getContentItems().length > 0 && (
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-4">
             {language === "ar" ? "إدارة المحتوى" : "Content"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {contentItems.map((item) => (
+              {getContentItems().map((item) => (
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton
                     asChild
@@ -193,15 +233,17 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
         {/* Business Section */}
+        {getBusinessItems().length > 0 && (
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-4">
             {language === "ar" ? "الأعمال" : "Business"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {businessItems.map((item) => (
+              {getBusinessItems().map((item) => (
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton
                     asChild
