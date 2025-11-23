@@ -29,6 +29,7 @@ import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminMeetings from "@/pages/admin/AdminMeetings";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminWithdrawals from "@/pages/admin/AdminWithdrawals";
+import AdminPricing from "@/pages/admin/AdminPricing";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -100,6 +101,13 @@ function Router() {
             {() => (
               <AdminLayout>
                 <AdminMeetings />
+              </AdminLayout>
+            )}
+          </Route>
+          <Route path="/admin/pricing">
+            {() => (
+              <AdminLayout>
+                <AdminPricing />
               </AdminLayout>
             )}
           </Route>

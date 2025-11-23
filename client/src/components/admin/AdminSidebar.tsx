@@ -90,6 +90,11 @@ export function AdminSidebar() {
 
   const businessItems = [
     {
+      title: language === "ar" ? "خطط الاشتراك" : "Pricing Plans",
+      icon: DollarSign,
+      path: "/admin/pricing",
+    },
+    {
       title: language === "ar" ? "المستخدمون" : "Users",
       icon: Users,
       path: "/admin/users",
