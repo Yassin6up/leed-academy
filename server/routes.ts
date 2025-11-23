@@ -971,6 +971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = await storage.cancelUserSubscription(id);
+      await logAdminAction(userId, "cancel", "subscriptions", `Cancelled subscription for user ${targetUser.firstName} ${targetUser.lastName}`);
       res.json(user);
     } catch (error: any) {
       console.error("Error cancelling subscription:", error);
