@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Plus, Edit, Shield, Headphones, Settings, UserPlus } from "lucide-react";
+import { Users, Plus, Edit, Shield, Headphones, Settings, UserPlus, Search, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@shared/schema";
@@ -24,6 +24,7 @@ export default function AdminRoles() {
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Create user form state
@@ -109,7 +110,14 @@ export default function AdminRoles() {
     }
   };
 
-  const filteredUsers = users?.filter((u) => roleFilter === "all" || u.role === roleFilter) || [];
+  const filteredUsers = users?.filter((u) => {
+    const matchesRole = roleFilter === "all" || u.role === roleFilter;
+    const matchesSearch = searchQuery.toLowerCase() === "" || 
+      u.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesRole && matchesSearch;
+  }) || [];
 
   const stats = {
     total: users?.length || 0,
@@ -296,6 +304,30 @@ export default function AdminRoles() {
 
       {/* Users List with Filtering */}
       <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative" data-testid="search-users-container">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            <Search className="h-4 w-4" />
+          </div>
+          <Input
+            placeholder={language === "ar" ? "ابحث عن المستخدمين..." : "Search users by name or email..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-10"
+            data-testid="input-search-users"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="button-clear-search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Role Filter Tabs */}
         <Tabs value={roleFilter} onValueChange={setRoleFilter}>
           <TabsList className="w-full justify-start" data-testid="tabs-role-filter">
             <TabsTrigger value="all" data-testid="tab-all">
@@ -320,6 +352,14 @@ export default function AdminRoles() {
           </TabsList>
 
           <TabsContent value={roleFilter} className="space-y-3">
+            {searchQuery && (
+              <div className="text-sm text-muted-foreground mb-4">
+                {language === "ar" 
+                  ? `عرض ${filteredUsers.length} من ${stats.total} نتيجة للبحث: "${searchQuery}"`
+                  : `Showing ${filteredUsers.length} of ${stats.total} results for: "${searchQuery}"`
+                }
+              </div>
+            )}
             {filteredUsers.length > 0 ? (
               filteredUsers.map((user) => (
                 <Card key={user.id} className="hover-elevate transition-all" data-testid={`card-user-${user.id}`}>
