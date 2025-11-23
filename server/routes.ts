@@ -387,6 +387,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         featuresAr: featuresAr || [],
         isPopular: isPopular || false,
       });
+      const userId = (req.session as any)?.userId;
+      await logAdminAction(userId, "create", "pricing", `Created subscription plan: ${nameEn} - $${price}`);
       res.json(plan);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to create plan" });
@@ -404,6 +406,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         featuresAr: featuresAr || undefined,
         isPopular: isPopular !== undefined ? isPopular : undefined,
       });
+      const userId = (req.session as any)?.userId;
+      await logAdminAction(userId, "update", "pricing", `Updated subscription plan: ${nameEn || "Plan"}`);
       res.json(plan);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to update plan" });
@@ -412,7 +416,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/admin/subscription-plans/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
+      const plan = await storage.getSubscriptionPlan(req.params.id);
       await storage.deleteSubscriptionPlan(req.params.id);
+      const userId = (req.session as any)?.userId;
+      await logAdminAction(userId, "delete", "pricing", `Deleted subscription plan: ${plan?.nameEn || req.params.id}`);
       res.json({ message: "Plan deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to delete plan" });
@@ -1080,6 +1087,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        const userId = (req.session as any)?.userId;
+        await logAdminAction(userId, "create", "courses", `Created new course: ${validated.titleEn}`);
         res.json(course);
       } catch (error: any) {
         // Cleanup uploaded files on error
@@ -1168,6 +1177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const course = await storage.updateCourse(req.params.id, courseData);
+        const userId = (req.session as any)?.userId;
+        await logAdminAction(userId, "update", "courses", `Updated course: ${courseData.titleEn}`);
         res.json(course);
       } catch (error: any) {
         uploadedFiles.forEach(file => {
@@ -1185,7 +1196,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/admin/courses/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
+      const course = await storage.getCourse(req.params.id);
       await storage.deleteCourse(req.params.id);
+      const userId = (req.session as any)?.userId;
+      await logAdminAction(userId, "delete", "courses", `Deleted course: ${course?.titleEn || req.params.id}`);
       res.json({ message: "Course deleted" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1274,6 +1288,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        const userId = (req.session as any)?.userId;
+        await logAdminAction(userId, "create", "lessons", `Created new lesson: ${validated.titleEn}`);
         res.json(lesson);
       } catch (error: any) {
         // Comprehensive cleanup on error - clean up temp file
@@ -1307,7 +1323,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/admin/lessons/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
+      const lesson = await storage.getLesson(req.params.id);
       await storage.deleteLesson(req.params.id);
+      const userId = (req.session as any)?.userId;
+      await logAdminAction(userId, "delete", "lessons", `Deleted lesson: ${lesson?.titleEn || req.params.id}`);
       res.json({ message: "Lesson deleted" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
