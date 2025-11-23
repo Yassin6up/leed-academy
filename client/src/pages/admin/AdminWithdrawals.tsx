@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { Check, X, AlertCircle } from "lucide-react";
+import { Check, X, AlertCircle, DollarSign, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface AdminWithdrawalRequest {
@@ -33,10 +33,33 @@ export default function AdminWithdrawals() {
   const { toast } = useToast();
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "rejected">("all");
 
   const { data: withdrawals = [], isLoading, refetch } = useQuery<AdminWithdrawalRequest[]>({
     queryKey: ["/api/withdrawals/admin"],
   });
+
+  // Calculate statistics
+  const stats = {
+    totalAmount: withdrawals.reduce((sum, w) => sum + parseFloat(w.amount), 0),
+    pendingAmount: withdrawals
+      .filter((w) => w.status === "pending")
+      .reduce((sum, w) => sum + parseFloat(w.amount), 0),
+    completedAmount: withdrawals
+      .filter((w) => w.status === "completed")
+      .reduce((sum, w) => sum + parseFloat(w.amount), 0),
+    rejectedAmount: withdrawals
+      .filter((w) => w.status === "rejected")
+      .reduce((sum, w) => sum + parseFloat(w.amount), 0),
+    pendingCount: withdrawals.filter((w) => w.status === "pending").length,
+    completedCount: withdrawals.filter((w) => w.status === "completed").length,
+    rejectedCount: withdrawals.filter((w) => w.status === "rejected").length,
+  };
+
+  // Filter withdrawals based on status
+  const filteredWithdrawals = statusFilter === "all" 
+    ? withdrawals 
+    : withdrawals.filter((w) => w.status === statusFilter);
 
   const approveMutation = useMutation({
     mutationFn: async (withdrawalId: string) => {
@@ -88,8 +111,8 @@ export default function AdminWithdrawals() {
     },
   });
 
-  const pendingRequests = withdrawals.filter((w) => w.status === "pending");
-  const processedRequests = withdrawals.filter((w) => w.status !== "pending");
+  const pendingRequests = filteredWithdrawals.filter((w) => w.status === "pending");
+  const processedRequests = filteredWithdrawals.filter((w) => w.status !== "pending");
 
   if (isLoading) {
     return (
@@ -111,6 +134,99 @@ export default function AdminWithdrawals() {
           {language === "ar" ? "قبول أو رفض طلبات سحب الأرباح" : "Approve or reject withdrawal requests"}
         </p>
       </div>
+
+      {/* Statistics Cards */}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card data-testid="card-total-withdrawn">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-600" />
+              {language === "ar" ? "إجمالي المبالغ المسحوبة" : "Total Withdrawn"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-green-600">${stats.totalAmount.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {language === "ar" ? "جميع الطلبات" : "All requests"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-pending-withdrawn" className="border-yellow-200 dark:border-yellow-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Clock className="h-4 w-4 text-yellow-600" />
+              {language === "ar" ? "المبالغ المعلقة" : "Pending Amount"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-yellow-600">${stats.pendingAmount.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.pendingCount} {language === "ar" ? "طلب" : "requests"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-completed-withdrawn" className="border-green-200 dark:border-green-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              {language === "ar" ? "المبالغ المكتملة" : "Completed Amount"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-green-600">${stats.completedAmount.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.completedCount} {language === "ar" ? "طلب" : "requests"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-rejected-withdrawn" className="border-red-200 dark:border-red-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <X className="h-4 w-4 text-red-600" />
+              {language === "ar" ? "المبالغ المرفوضة" : "Rejected Amount"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-red-600">${stats.rejectedAmount.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.rejectedCount} {language === "ar" ? "طلب" : "requests"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">
+            {language === "ar" ? "تصفية الطلبات" : "Filter Requests"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {["all", "pending", "completed", "rejected"].map((status) => (
+              <Button
+                key={status}
+                variant={statusFilter === status ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter(status as any)}
+                data-testid={`button-filter-${status}`}
+              >
+                {status === "all"
+                  ? language === "ar" ? "الكل" : "All"
+                  : status === "pending"
+                  ? language === "ar" ? "المعلقة" : "Pending"
+                  : status === "completed"
+                  ? language === "ar" ? "المكتملة" : "Completed"
+                  : language === "ar" ? "المرفوضة" : "Rejected"}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Pending Requests */}
       <div>
