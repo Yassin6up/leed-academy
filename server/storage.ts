@@ -921,15 +921,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllAdminLogs(): Promise<AdminLog[]> {
-    return await db.select().from(adminLogs).orderBy(desc(adminLogs.createdAt));
+    console.log("💾 [STORAGE] Fetching ALL admin logs from database");
+    const logs = await db.select().from(adminLogs).orderBy(desc(adminLogs.createdAt));
+    console.log("✅ [STORAGE] Found admin logs:", logs.length, "entries");
+    if (logs.length > 0) {
+      console.log("📋 [STORAGE] First log:", logs[0]);
+    }
+    return logs;
   }
 
   async getAdminLogsByDateRange(startDate: Date, endDate: Date): Promise<AdminLog[]> {
-    return await db
+    console.log("💾 [STORAGE] Fetching admin logs by date range:", {
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
+    });
+    const logs = await db
       .select()
       .from(adminLogs)
       .where(and(gte(adminLogs.createdAt, startDate), lte(adminLogs.createdAt, endDate)))
       .orderBy(desc(adminLogs.createdAt));
+    console.log("✅ [STORAGE] Found admin logs in range:", logs.length, "entries");
+    if (logs.length > 0) {
+      console.log("📋 [STORAGE] First log:", logs[0]);
+    }
+    return logs;
   }
 
   async getAdminLogsByPage(page: string): Promise<AdminLog[]> {
