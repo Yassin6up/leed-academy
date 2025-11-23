@@ -194,6 +194,8 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userName: varchar("user_name"),
+  userEmail: varchar("user_email"),
   subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
   planId: varchar("plan_id").references(() => subscriptionPlans.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),

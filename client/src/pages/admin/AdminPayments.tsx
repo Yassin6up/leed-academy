@@ -18,17 +18,41 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Check, X, Eye } from "lucide-react";
 import type { Payment } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function AdminPayments() {
   const { language } = useLanguage();
   const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [methodFilter, setMethodFilter] = useState<string>("");
+  const [searchFilter, setSearchFilter] = useState<string>("");
 
   const { data: payments, isLoading } = useQuery<Payment[]>({
     queryKey: ["/api/admin/payments"],
+  });
+
+  const filteredPayments = payments?.filter((payment) => {
+    const matchStatus = !statusFilter || payment.status === statusFilter;
+    const matchMethod = !methodFilter || payment.method === methodFilter;
+    const searchLower = searchFilter.toLowerCase();
+    const matchSearch =
+      !searchFilter ||
+      payment.userName?.toLowerCase().includes(searchLower) ||
+      payment.userEmail?.toLowerCase().includes(searchLower) ||
+      payment.id.toLowerCase().includes(searchLower);
+    return matchStatus && matchMethod && matchSearch;
   });
 
   const updatePaymentMutation = useMutation({
@@ -78,10 +102,59 @@ export default function AdminPayments() {
             {language === "ar" ? "جميع المدفوعات" : "All Payments"}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Input
+              placeholder={language === "ar" ? "ابحث بالاسم أو البريد..." : "Search by name or email..."}
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              data-testid="input-search-payments"
+            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger data-testid="select-status-filter">
+                <SelectValue placeholder={language === "ar" ? "كل الحالات" : "All Status"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">{language === "ar" ? "كل الحالات" : "All Status"}</SelectItem>
+                <SelectItem value="pending">{language === "ar" ? "قيد الانتظار" : "Pending"}</SelectItem>
+                <SelectItem value="approved">{language === "ar" ? "موافق عليه" : "Approved"}</SelectItem>
+                <SelectItem value="rejected">{language === "ar" ? "مرفوض" : "Rejected"}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={methodFilter} onValueChange={setMethodFilter}>
+              <SelectTrigger data-testid="select-method-filter">
+                <SelectValue placeholder={language === "ar" ? "كل الطرق" : "All Methods"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">{language === "ar" ? "كل الطرق" : "All Methods"}</SelectItem>
+                <SelectItem value="bank_transfer">{language === "ar" ? "تحويل بنكي" : "Bank Transfer"}</SelectItem>
+                <SelectItem value="crypto">{language === "ar" ? "عملات رقمية" : "Crypto"}</SelectItem>
+              </SelectContent>
+            </Select>
+            {(statusFilter || methodFilter || searchFilter) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStatusFilter("");
+                  setMethodFilter("");
+                  setSearchFilter("");
+                }}
+                data-testid="button-clear-filters"
+              >
+                {language === "ar" ? "مسح الفلترة" : "Clear Filters"}
+              </Button>
+            )}
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            {language === "ar" ? "النتائج: " : "Results: "} {filteredPayments?.length || 0}
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>{language === "ar" ? "المستخدم" : "User"}</TableHead>
+                <TableHead>{language === "ar" ? "البريد الإلكتروني" : "Email"}</TableHead>
                 <TableHead>{language === "ar" ? "المبلغ" : "Amount"}</TableHead>
                 <TableHead>{language === "ar" ? "الطريقة" : "Method"}</TableHead>
                 <TableHead>{language === "ar" ? "الحالة" : "Status"}</TableHead>
@@ -91,8 +164,14 @@ export default function AdminPayments() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {payments?.map((payment) => (
+              {filteredPayments?.map((payment) => (
                 <TableRow key={payment.id} data-testid={`row-payment-${payment.id}`}>
+                  <TableCell className="font-medium">
+                    {payment.userName || "N/A"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {payment.userEmail || "N/A"}
+                  </TableCell>
                   <TableCell className="font-medium">
                     ${payment.amount} {payment.currency}
                   </TableCell>
@@ -184,6 +263,11 @@ export default function AdminPayments() {
               ))}
             </TableBody>
           </Table>
+          {filteredPayments?.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              {language === "ar" ? "لا توجد مدفوعات" : "No payments found"}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

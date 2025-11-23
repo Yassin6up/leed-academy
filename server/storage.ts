@@ -450,7 +450,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllPayments(): Promise<Payment[]> {
-    return await db.select().from(payments).orderBy(desc(payments.createdAt));
+    const result = await db
+      .select({
+        ...payments,
+      })
+      .from(payments)
+      .leftJoin(users, eq(payments.userId, users.id))
+      .orderBy(desc(payments.createdAt));
+    
+    return result.map(row => {
+      const payment = row.payments;
+      const user = row.users;
+      return {
+        ...payment,
+        userName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : payment.userName,
+        userEmail: user?.email || payment.userEmail,
+      };
+    });
   }
 
   async getUserPayments(userId: string): Promise<Payment[]> {
@@ -462,7 +478,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
-    const [newPayment] = await db.insert(payments).values(payment).returning();
+    const user = await this.getUser(payment.userId);
+    const paymentData = {
+      ...payment,
+      userName: user ? `${user.firstName} ${user.lastName}` : undefined,
+      userEmail: user?.email,
+    };
+    const [newPayment] = await db.insert(payments).values(paymentData).returning();
     return newPayment;
   }
 

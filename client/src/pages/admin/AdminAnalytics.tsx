@@ -100,20 +100,20 @@ export default function AdminAnalytics() {
   const paymentStatusData = [
     {
       name: language === "ar" ? "قيد الانتظار" : "Pending",
-      value: analytics.paymentStatusBreakdown?.pending || 0,
+      value: analytics.paymentStatusBreakdown?.pending ?? 0,
       color: COLORS[3],
     },
     {
       name: language === "ar" ? "موافق عليها" : "Approved",
-      value: analytics.paymentStatusBreakdown?.approved || 0,
+      value: analytics.paymentStatusBreakdown?.approved ?? 0,
       color: COLORS[0],
     },
     {
       name: language === "ar" ? "مرفوضة" : "Rejected",
-      value: analytics.paymentStatusBreakdown?.rejected || 0,
+      value: analytics.paymentStatusBreakdown?.rejected ?? 0,
       color: COLORS[2],
     },
-  ];
+  ].filter(item => item.value > 0);
 
   return (
     <div className="p-8 space-y-8">
