@@ -36,6 +36,16 @@ export default function CourseDetail() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [videoSrc, setVideoSrc] = useState<string>("");
 
+  const { data: course } = useQuery<Course>({
+    queryKey: ["/api/courses", params?.id],
+    enabled: !!params?.id,
+  });
+
+  const { data: lessons } = useQuery<Lesson[]>({
+    queryKey: ["/api/courses", params?.id, "lessons"],
+    enabled: !!params?.id,
+  });
+
   // Update video source when lesson changes
   useEffect(() => {
     if (!lessons || lessons.length === 0) return;
@@ -55,16 +65,6 @@ export default function CourseDetail() {
     e.preventDefault();
     return false;
   };
-
-  const { data: course } = useQuery<Course>({
-    queryKey: ["/api/courses", params?.id],
-    enabled: !!params?.id,
-  });
-
-  const { data: lessons } = useQuery<Lesson[]>({
-    queryKey: ["/api/courses", params?.id, "lessons"],
-    enabled: !!params?.id,
-  });
 
   const { data: userProgress } = useQuery<UserProgress[]>({
     queryKey: ["/api/progress", params?.id],
