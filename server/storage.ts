@@ -12,6 +12,7 @@ import {
   testimonials,
   paymentSettings,
   settings,
+  referralTransactions,
   type User,
   type UpsertUser,
   type Course,
@@ -35,6 +36,8 @@ import {
   type PaymentSettings,
   type InsertPaymentSettings,
   type Setting,
+  type ReferralTransaction,
+  type InsertReferralTransaction,
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -49,6 +52,8 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
   getReferralCount(userId: string): Promise<number>;
+  getReferralStats(userId: string): Promise<{ count: number; earnings: string; transactions: ReferralTransaction[] }>;
+  addReferralEarnings(referrerId: string, referredUserId: string, amount: number): Promise<ReferralTransaction>;
   validateUserPassword(email: string, password: string): Promise<User | null>;
   deactivateUser(userId: string): Promise<User>;
   activateUser(userId: string): Promise<User>;

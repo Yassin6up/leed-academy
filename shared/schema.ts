@@ -37,8 +37,10 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 20 }).notNull().default("user"),
   subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none"),
   isActive: boolean("is_active").notNull().default(true),
-  referralCode: varchar("referral_code", { length: 10 }).unique(),
-  referredBy: varchar("referred_by", { length: 10 }),
+  referralCode: varchar("referral_code", { length: 8 }).unique(),
+  referredBy: varchar("referred_by", { length: 8 }),
+  referralCount: integer("referral_count").default(0),
+  referralEarnings: decimal("referral_earnings", { precision: 10, scale: 2 }).default("0"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -61,6 +63,23 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Referral Transactions table
+export const referralTransactions = pgTable("referral_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerId: varchar("referrer_id").notNull().references(() => users.id),
+  referredUserId: varchar("referred_user_id").notNull().references(() => users.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull().default("10"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, completed
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertReferralTransactionSchema = createInsertSchema(referralTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertReferralTransaction = z.infer<typeof insertReferralTransactionSchema>;
+export type ReferralTransaction = typeof referralTransactions.$inferSelect;
 
 // Subscription Plans
 export const subscriptionPlans = pgTable("subscription_plans", {
