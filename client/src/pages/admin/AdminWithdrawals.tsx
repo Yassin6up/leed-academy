@@ -22,6 +22,10 @@ interface AdminWithdrawalRequest {
   userName: string;
   userEmail: string;
   referralCode: string;
+  referralCount: number;
+  referralEarnings: string;
+  phone?: string;
+  subscriptionStatus?: string;
 }
 
 export default function AdminWithdrawals() {
@@ -150,6 +154,7 @@ export default function AdminWithdrawals() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Withdrawal Details */}
                   <div className="grid md:grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">
@@ -159,29 +164,87 @@ export default function AdminWithdrawals() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        {language === "ar" ? "المبلغ" : "Amount"}
+                        {language === "ar" ? "المبلغ" : "Withdrawal Amount"}
                       </p>
-                      <p className="font-bold text-lg">${parseFloat(withdrawal.amount).toFixed(2)}</p>
+                      <p className="font-bold text-lg text-green-600">${parseFloat(withdrawal.amount).toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        {language === "ar" ? "السلسلة" : "Chain"}
+                        {language === "ar" ? "السلسلة" : "Blockchain"}
                       </p>
                       <p className="font-semibold">{withdrawal.chain.toUpperCase()}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        {language === "ar" ? "التاريخ" : "Date"}
+                        {language === "ar" ? "التاريخ" : "Requested Date"}
                       </p>
                       <p className="text-sm">{new Date(withdrawal.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {language === "ar" ? "عنوان المحفظة" : "Wallet Address"}
+                  {/* Referral Stats */}
+                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-semibold mb-3 text-sm">
+                      {language === "ar" ? "إحصائيات الإحالة" : "Referral Statistics"}
+                    </h4>
+                    <div className="grid md:grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {language === "ar" ? "عدد الإحالات" : "Total Referrals"}
+                        </p>
+                        <p className="text-2xl font-bold text-blue-600">{withdrawal.referralCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {language === "ar" ? "إجمالي الأرباح" : "Total Earnings"}
+                        </p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          ${parseFloat(withdrawal.referralEarnings).toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {language === "ar" ? "حالة الاشتراك" : "Subscription Status"}
+                        </p>
+                        <Badge variant={withdrawal.subscriptionStatus === "active" ? "default" : "secondary"}>
+                          {withdrawal.subscriptionStatus === "active"
+                            ? language === "ar" ? "نشط" : "Active"
+                            : language === "ar" ? "غير نشط" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Info */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold text-sm mb-3">
+                      {language === "ar" ? "بيانات المستخدم" : "User Contact Information"}
+                    </h4>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {language === "ar" ? "رقم الهاتف" : "Phone"}
+                        </p>
+                        <p className="text-sm font-medium">{withdrawal.phone || (language === "ar" ? "لم يتم تقديمه" : "Not provided")}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {language === "ar" ? "البريد الإلكتروني" : "Email"}
+                        </p>
+                        <p className="text-sm font-medium break-all">{withdrawal.userEmail}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Wallet Address */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold text-sm mb-2">
+                      {language === "ar" ? "عنوان المحفظة" : "Wallet Details"}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {language === "ar" ? "عنوان USDT" : "USDT Wallet Address"}
                     </p>
-                    <p className="font-mono text-sm break-all bg-muted p-2 rounded">
+                    <p className="font-mono text-sm break-all bg-muted p-3 rounded border">
                       {withdrawal.walletAddress}
                     </p>
                   </div>

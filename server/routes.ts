@@ -1495,6 +1495,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userName: `${user?.firstName} ${user?.lastName}`,
             userEmail: user?.email,
             referralCode: user?.referralCode,
+            referralCount: user?.referralCount || 0,
+            referralEarnings: user?.referralEarnings || "0",
+            phone: user?.phone,
+            subscriptionStatus: user?.subscriptionStatus,
           };
         })
       );
