@@ -727,7 +727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get("/api/admin/stats", isAuthenticated, requireAdmin, async (_req, res) => {
+  app.get("/api/admin/stats", isAuthenticated, requireAdminRole, async (_req, res) => {
     const users = await storage.getAllUsers();
     const courses = await storage.getAllCourses();
     const payments = await storage.getAllPayments();
@@ -760,7 +760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin analytics endpoint
-  app.get("/api/admin/analytics", isAuthenticated, requireAdmin, async (_req, res) => {
+  app.get("/api/admin/analytics", isAuthenticated, requireAdminRole, async (_req, res) => {
     try {
       const analytics = await storage.getAnalytics();
       res.json(analytics);
@@ -996,7 +996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/courses", isAuthenticated, requireAdmin, async (_req, res) => {
+  app.get("/api/admin/courses", isAuthenticated, requireAdminRole, async (_req, res) => {
     const courses = await storage.getAllCourses();
     res.json(courses);
   });
@@ -1032,7 +1032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   });
 
-  app.post("/api/admin/courses", isAuthenticated, requireAdmin, (req, res) => {
+  app.post("/api/admin/courses", isAuthenticated, requireAdminRole, (req, res) => {
     courseUpload.fields([
       { name: "thumbnail", maxCount: 1 },
       { name: "lessonVideos", maxCount: 20 },
@@ -1132,7 +1132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.patch("/api/admin/courses/:id", isAuthenticated, requireAdmin, (req, res) => {
+  app.patch("/api/admin/courses/:id", isAuthenticated, requireAdminRole, (req, res) => {
     courseUpload.fields([
       { name: "thumbnail", maxCount: 1 },
     ])(req, res, async (err) => {
@@ -1212,7 +1212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.delete("/api/admin/courses/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/courses/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const course = await storage.getCourse(req.params.id);
       await storage.deleteCourse(req.params.id);
@@ -1248,7 +1248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   });
 
-  app.post("/api/admin/lessons", isAuthenticated, requireAdmin, (req, res) => {
+  app.post("/api/admin/lessons", isAuthenticated, requireAdminRole, (req, res) => {
     lessonUpload.single("video")(req, res, async (err) => {
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {
@@ -1339,7 +1339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.delete("/api/admin/lessons/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/lessons/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const lesson = await storage.getLesson(req.params.id);
       await storage.deleteLesson(req.params.id);
@@ -1383,7 +1383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/courses/:courseId/resources", isAuthenticated, requireAdmin, (req, res) => {
+  app.post("/api/admin/courses/:courseId/resources", isAuthenticated, requireAdminRole, (req, res) => {
     resourceUpload.single("file")(req, res, async (err) => {
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {
@@ -1460,7 +1460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.post("/api/admin/courses/:courseId/resources/link", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/admin/courses/:courseId/resources/link", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { courseId } = req.params;
       const { titleEn, titleAr, descriptionEn, descriptionAr, linkUrl } = req.body;
@@ -1483,7 +1483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/course-resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/course-resources/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const resource = await storage.updateCourseResource(req.params.id, {
         ...req.body,
@@ -1495,7 +1495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/course-resources/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/course-resources/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       await storage.deleteCourseResource(req.params.id);
       res.json({ message: "Resource deleted successfully" });
@@ -1546,12 +1546,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/meetings", isAuthenticated, requireAdmin, async (_req, res) => {
+  app.get("/api/admin/meetings", isAuthenticated, requireAdminRole, async (_req, res) => {
     const meetings = await storage.getAllMeetings();
     res.json(meetings);
   });
 
-  app.post("/api/admin/meetings", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/admin/meetings", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       // Convert scheduledAt string to Date object
       const meetingData = {
@@ -1567,7 +1567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/meetings/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/meetings/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       // Convert scheduledAt string to Date object if provided
       const updateData = {
@@ -1589,7 +1589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/meetings/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/meetings/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       await storage.deleteMeeting(req.params.id);
       res.json({ message: "Meeting deleted" });
@@ -1879,7 +1879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Logs endpoints (Admin only)
-  app.get("/api/admin/logs", isAuthenticated, requireAdmin, async (req, res) => {
+  app.get("/api/admin/logs", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
       const userId = (req.session as any)?.userId;
