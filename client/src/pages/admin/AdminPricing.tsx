@@ -7,11 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Edit, Trash2, Star } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertSubscriptionPlanSchema } from "@shared/schema";
+import { Plus, Edit, Trash2, Star, X } from "lucide-react";
 import type { SubscriptionPlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -21,51 +17,76 @@ export default function AdminPricing() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+  
+  // Form fields
+  const [nameEn, setNameEn] = useState("");
+  const [nameAr, setNameAr] = useState("");
+  const [descriptionEn, setDescriptionEn] = useState("");
+  const [descriptionAr, setDescriptionAr] = useState("");
+  const [price, setPrice] = useState("");
+  const [durationDays, setDurationDays] = useState("30");
+  const [isPopular, setIsPopular] = useState(false);
+  const [featureEnInput, setFeatureEnInput] = useState("");
+  const [featureArInput, setFeatureArInput] = useState("");
+  const [featuresEn, setFeaturesEn] = useState<string[]>([]);
+  const [featuresAr, setFeaturesAr] = useState<string[]>([]);
 
   const { data: plans, isLoading } = useQuery<SubscriptionPlan[]>({
     queryKey: ["/api/subscription-plans"],
   });
 
-  const form = useForm({
-    resolver: zodResolver(insertSubscriptionPlanSchema),
-    defaultValues: {
-      nameEn: "",
-      nameAr: "",
-      descriptionEn: "",
-      descriptionAr: "",
-      price: "0",
-      durationDays: 30,
-      featuresEn: [],
-      featuresAr: [],
-      isPopular: false,
-    },
-  });
-
   const createPlanMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/subscription-plans", data);
+    mutationFn: async () => {
+      if (!nameEn || !nameAr || !price || !durationDays) {
+        throw new Error("Please fill in all required fields");
+      }
+      return await apiRequest("POST", "/api/admin/subscription-plans", {
+        nameEn,
+        nameAr,
+        descriptionEn,
+        descriptionAr,
+        price: parseFloat(price),
+        durationDays: parseInt(durationDays),
+        featuresEn,
+        featuresAr,
+        isPopular,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
       toast({
         title: language === "ar" ? "تم الإنشاء" : "Created",
-        description: language === "ar" ? "تم إنشاء خطة الاشتراك بنجاح" : "Subscription plan created successfully",
+        description: language === "ar" ? "تم إنشاء خطة الاشتراك بنجاح" : "Plan created successfully",
       });
+      resetForm();
       setDialogOpen(false);
-      form.reset();
     },
     onError: (error: any) => {
       toast({
         title: language === "ar" ? "خطأ" : "Error",
-        description: error.response?.data?.message || "Failed to create plan",
+        description: error.response?.data?.message || error.message || "Failed to create plan",
         variant: "destructive",
       });
     },
   });
 
   const updatePlanMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("PATCH", `/api/admin/subscription-plans/${editingPlan?.id}`, data);
+    mutationFn: async () => {
+      if (!editingPlan) throw new Error("No plan selected");
+      if (!nameEn || !nameAr || !price || !durationDays) {
+        throw new Error("Please fill in all required fields");
+      }
+      return await apiRequest("PATCH", `/api/admin/subscription-plans/${editingPlan.id}`, {
+        nameEn,
+        nameAr,
+        descriptionEn,
+        descriptionAr,
+        price: parseFloat(price),
+        durationDays: parseInt(durationDays),
+        featuresEn,
+        featuresAr,
+        isPopular,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
@@ -73,14 +94,13 @@ export default function AdminPricing() {
         title: language === "ar" ? "تم التحديث" : "Updated",
         description: language === "ar" ? "تم تحديث الخطة بنجاح" : "Plan updated successfully",
       });
+      resetForm();
       setDialogOpen(false);
-      setEditingPlan(null);
-      form.reset();
     },
     onError: (error: any) => {
       toast({
         title: language === "ar" ? "خطأ" : "Error",
-        description: error.response?.data?.message || "Failed to update plan",
+        description: error.response?.data?.message || error.message || "Failed to update plan",
         variant: "destructive",
       });
     },
@@ -99,40 +119,60 @@ export default function AdminPricing() {
     },
   });
 
-  const onSubmit = (data: any) => {
-    const formData = {
-      ...data,
-      price: parseFloat(data.price).toFixed(2),
-      durationDays: parseInt(data.durationDays),
-    };
-
-    if (editingPlan) {
-      updatePlanMutation.mutate(formData);
-    } else {
-      createPlanMutation.mutate(formData);
-    }
+  const resetForm = () => {
+    setNameEn("");
+    setNameAr("");
+    setDescriptionEn("");
+    setDescriptionAr("");
+    setPrice("");
+    setDurationDays("30");
+    setIsPopular(false);
+    setFeaturesEn([]);
+    setFeaturesAr([]);
+    setFeatureEnInput("");
+    setFeatureArInput("");
+    setEditingPlan(null);
   };
 
   const openEditDialog = (plan: SubscriptionPlan) => {
     setEditingPlan(plan);
-    form.reset({
-      nameEn: plan.nameEn,
-      nameAr: plan.nameAr,
-      descriptionEn: plan.descriptionEn || "",
-      descriptionAr: plan.descriptionAr || "",
-      price: plan.price.toString(),
-      durationDays: plan.durationDays,
-      featuresEn: plan.featuresEn || [],
-      featuresAr: plan.featuresAr || [],
-      isPopular: plan.isPopular || false,
-    });
+    setNameEn(plan.nameEn);
+    setNameAr(plan.nameAr);
+    setDescriptionEn(plan.descriptionEn || "");
+    setDescriptionAr(plan.descriptionAr || "");
+    setPrice(plan.price.toString());
+    setDurationDays(plan.durationDays.toString());
+    setFeaturesEn(plan.featuresEn || []);
+    setFeaturesAr(plan.featuresAr || []);
+    setIsPopular(plan.isPopular || false);
     setDialogOpen(true);
+  };
+
+  const addFeatureEn = () => {
+    if (featureEnInput.trim()) {
+      setFeaturesEn([...featuresEn, featureEnInput.trim()]);
+      setFeatureEnInput("");
+    }
+  };
+
+  const addFeatureAr = () => {
+    if (featureArInput.trim()) {
+      setFeaturesAr([...featuresAr, featureArInput.trim()]);
+      setFeatureArInput("");
+    }
+  };
+
+  const removeFeatureEn = (index: number) => {
+    setFeaturesEn(featuresEn.filter((_, i) => i !== index));
+  };
+
+  const removeFeatureAr = (index: number) => {
+    setFeaturesAr(featuresAr.filter((_, i) => i !== index));
   };
 
   const closeDialog = () => {
     setDialogOpen(false);
-    setEditingPlan(null);
-    form.reset();
+    resetForm();
   };
 
   if (isLoading) {
@@ -158,7 +198,7 @@ export default function AdminPricing() {
         </h1>
         <Dialog open={dialogOpen} onOpenChange={closeDialog}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-plan">
+            <Button data-testid="button-create-plan" onClick={() => resetForm()}>
               <Plus className="h-4 w-4 mr-2" />
               {language === "ar" ? "إنشاء خطة" : "Create Plan"}
             </Button>
@@ -175,121 +215,94 @@ export default function AdminPricing() {
                   : "Create New Plan"}
               </DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="nameEn"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name (English)</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Starter" data-testid="input-name-en" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="nameAr"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name (Arabic)</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="مثال: أساسي" data-testid="input-name-ar" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Name (English)</label>
+                  <Input value={nameEn} onChange={(e) => setNameEn(e.target.value)} placeholder="e.g., Starter" data-testid="input-name-en" />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Price ($)</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" {...field} data-testid="input-price" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="durationDays"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duration (days)</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} data-testid="input-duration" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div>
+                  <label className="text-sm font-medium">Name (Arabic)</label>
+                  <Input value={nameAr} onChange={(e) => setNameAr(e.target.value)} placeholder="مثال: أساسي" data-testid="input-name-ar" />
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="descriptionEn"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description (English)</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} data-testid="input-desc-en" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="descriptionAr"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description (Arabic)</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} data-testid="input-desc-ar" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Price ($)</label>
+                  <Input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} data-testid="input-price" />
                 </div>
+                <div>
+                  <label className="text-sm font-medium">Duration (days)</label>
+                  <Input type="number" value={durationDays} onChange={(e) => setDurationDays(e.target.value)} data-testid="input-duration" />
+                </div>
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="isPopular"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2">
-                      <FormControl>
-                        <input type="checkbox" {...field} data-testid="input-is-popular" className="w-4 h-4" />
-                      </FormControl>
-                      <FormLabel className="m-0">
-                        {language === "ar" ? "خطة شهيرة" : "Mark as popular"}
-                      </FormLabel>
-                    </FormItem>
-                  )}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Description (English)</label>
+                  <Textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} data-testid="input-desc-en" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Description (Arabic)</label>
+                  <Textarea value={descriptionAr} onChange={(e) => setDescriptionAr(e.target.value)} data-testid="input-desc-ar" />
+                </div>
+              </div>
 
-                <Button type="submit" className="w-full" disabled={createPlanMutation.isPending || updatePlanMutation.isPending} data-testid="button-save-plan">
-                  {createPlanMutation.isPending || updatePlanMutation.isPending
-                    ? language === "ar"
-                      ? "جاري الحفظ..."
-                      : "Saving..."
-                    : language === "ar"
-                    ? "حفظ"
-                    : "Save"}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">{language === "ar" ? "المميزات (إنجليزي)" : "Features (English)"}</label>
+                <div className="flex gap-2">
+                  <Input value={featureEnInput} onChange={(e) => setFeatureEnInput(e.target.value)} placeholder="Add a feature" data-testid="input-feature-en" />
+                  <Button onClick={addFeatureEn} size="sm" data-testid="button-add-feature-en">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {featuresEn.map((feature, i) => (
+                    <Badge key={i} variant="secondary" className="flex items-center gap-1" data-testid={`badge-feature-en-${i}`}>
+                      {feature}
+                      <button onClick={() => removeFeatureEn(i)} className="ml-1 hover:opacity-70">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-medium">{language === "ar" ? "المميزات (عربي)" : "Features (Arabic)"}</label>
+                <div className="flex gap-2">
+                  <Input value={featureArInput} onChange={(e) => setFeatureArInput(e.target.value)} placeholder="أضف ميزة" data-testid="input-feature-ar" />
+                  <Button onClick={addFeatureAr} size="sm" data-testid="button-add-feature-ar">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {featuresAr.map((feature, i) => (
+                    <Badge key={i} variant="secondary" className="flex items-center gap-1" data-testid={`badge-feature-ar-${i}`}>
+                      {feature}
+                      <button onClick={() => removeFeatureAr(i)} className="ml-1 hover:opacity-70">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={isPopular} onChange={(e) => setIsPopular(e.target.checked)} data-testid="input-is-popular" className="w-4 h-4" />
+                <span className="text-sm font-medium">{language === "ar" ? "خطة شهيرة" : "Mark as popular"}</span>
+              </label>
+
+              <div className="flex gap-2">
+                <Button onClick={() => (editingPlan ? updatePlanMutation.mutate() : createPlanMutation.mutate())} className="flex-1" disabled={createPlanMutation.isPending || updatePlanMutation.isPending} data-testid="button-save-plan">
+                  {createPlanMutation.isPending || updatePlanMutation.isPending ? language === "ar" ? "جاري الحفظ..." : "Saving..." : language === "ar" ? "حفظ" : "Save"}
                 </Button>
-              </form>
-            </Form>
+                <Button onClick={closeDialog} variant="outline" data-testid="button-cancel-plan">
+                  {language === "ar" ? "إلغاء" : "Cancel"}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -321,24 +334,25 @@ export default function AdminPricing() {
                 </div>
               </div>
 
+              {(plan.featuresEn?.length || 0) > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">{language === "ar" ? "المميزات" : "Features"}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {(language === "ar" ? plan.featuresAr : plan.featuresEn)?.map((feature, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">
+                        {feature}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEditDialog(plan)}
-                  className="flex-1"
-                  data-testid={`button-edit-plan-${plan.id}`}
-                >
+                <Button variant="outline" size="sm" onClick={() => openEditDialog(plan)} className="flex-1" data-testid={`button-edit-plan-${plan.id}`}>
                   <Edit className="h-4 w-4 mr-1" />
                   {language === "ar" ? "تحرير" : "Edit"}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => deletePlanMutation.mutate(plan.id)}
-                  className="flex-1"
-                  data-testid={`button-delete-plan-${plan.id}`}
-                >
+                <Button variant="outline" size="sm" onClick={() => deletePlanMutation.mutate(plan.id)} className="flex-1" data-testid={`button-delete-plan-${plan.id}`}>
                   <Trash2 className="h-4 w-4 mr-1 text-destructive" />
                   {language === "ar" ? "حذف" : "Delete"}
                 </Button>
