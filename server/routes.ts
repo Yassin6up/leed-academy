@@ -825,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/users/:id/deactivate", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/users/:id/deactivate", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
       const currentUserId = (req.session as any)?.userId;
@@ -835,6 +835,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = await storage.deactivateUser(id);
+      const userId = (req.session as any)?.userId;
+      await logAdminAction(userId, "deactivate", "users", `Deactivated user account ${id}`);
       res.json(user);
     } catch (error: any) {
       console.error("Error deactivating user:", error);
@@ -842,7 +844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/users/:id/activate", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/users/:id/activate", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
       const userId = (req.session as any)?.userId;
@@ -852,6 +854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = await storage.activateUser(id);
+      await logAdminAction(userId, "activate", "users", `Activated user account ${id}`);
       res.json(user);
     } catch (error: any) {
       console.error("Error activating user:", error);
@@ -859,7 +862,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/users/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/users/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
       const currentUserId = (req.session as any)?.userId;
@@ -869,6 +872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.deleteUser(id);
+      await logAdminAction(currentUserId, "delete", "users", `Deleted user account ${id}`);
       res.json({ message: "User deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting user:", error);
@@ -876,7 +880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/users/:id/cancel-subscription", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/users/:id/cancel-subscription", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
       const userId = (req.session as any)?.userId;
