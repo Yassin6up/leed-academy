@@ -35,6 +35,17 @@ export default function CourseDetail() {
   const [lastProgressUpdate, setLastProgressUpdate] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // Prevent video download and right-click
+  const handleVideoContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    return false;
+  };
+
+  const handleVideoDragStart = (e: React.DragEvent) => {
+    e.preventDefault();
+    return false;
+  };
+
   const { data: course } = useQuery<Course>({
     queryKey: ["/api/courses", params?.id],
     enabled: !!params?.id,
@@ -278,15 +289,22 @@ export default function CourseDetail() {
         {/* Video & Content Area */}
         <div className={`flex-1 transition-all ${sidebarCollapsed ? "mr-0" : "mr-80 lg:mr-96"}`}>
           {/* Video Player */}
-          <div className="bg-black">
+          <div className="bg-black select-none">
             <div className="container mx-auto">
               <video
                 ref={videoRef}
-                className="w-full aspect-video"
+                className="w-full aspect-video pointer-events-auto"
                 controls
                 src={currentLesson?.videoUrl || undefined}
                 data-testid="video-player"
                 controlsList="nodownload"
+                onContextMenu={handleVideoContextMenu}
+                onDragStart={handleVideoDragStart}
+                style={{
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                  MsUserSelect: "none",
+                }}
               >
                 {language === "ar"
                   ? "متصفحك لا يدعم تشغيل الفيديو"
