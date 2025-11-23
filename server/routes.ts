@@ -812,8 +812,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName,
         lastName,
         phone: phone || "",
-        role: role || "user",
       });
+
+      // Update role if specified
+      if (role && role !== "user") {
+        await storage.updateUser(user.id, { role });
+      }
 
       // Log admin action
       await logAdminAction(adminId, "create-user", "users", `Created new user ${user.firstName} ${user.lastName} with role: ${role || 'user'}`, {
@@ -1756,7 +1760,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const referrals = await db
         .select()
         .from(users)
-        .where(eq(users.referredBy, user.referralCode));
+        .where(user.referralCode ? eq(users.referredBy, user.referralCode) : undefined)
+        .then(result => user.referralCode ? result : []);
 
       res.json({
         code: user.referralCode,
