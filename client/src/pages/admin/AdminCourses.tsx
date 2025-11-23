@@ -57,6 +57,8 @@ export default function AdminCourses() {
   const [editUploadProgress, setEditUploadProgress] = useState<number>(0);
   const [lessonVideoFile, setLessonVideoFile] = useState<File | null>(null);
   const [lessonUploadProgress, setLessonUploadProgress] = useState<number>(0);
+  const [searchFilter, setSearchFilter] = useState<string>("");
+  const [levelFilter, setLevelFilter] = useState<string>("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -64,6 +66,16 @@ export default function AdminCourses() {
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["/api/admin/courses"],
   });
+
+  const filteredCourses = courses?.filter((course) => {
+    const matchSearch = !searchFilter || 
+      course.titleEn?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      course.titleAr?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      course.instructorEn?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      course.instructorAr?.toLowerCase().includes(searchFilter.toLowerCase());
+    const matchLevel = levelFilter === "all" || course.level.toString() === levelFilter;
+    return matchSearch && matchLevel;
+  }) || [];
 
   const { data: lessons } = useQuery<Lesson[]>({
     queryKey: [`/api/courses/${selectedCourseId}/lessons`],

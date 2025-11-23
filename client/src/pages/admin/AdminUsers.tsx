@@ -41,6 +41,9 @@ export default function AdminUsers() {
   const { language } = useLanguage();
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
+  const [searchFilter, setSearchFilter] = useState<string>("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   
   const [actionDialog, setActionDialog] = useState<{
     open: boolean;
@@ -55,6 +58,16 @@ export default function AdminUsers() {
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
   });
+
+  const filteredUsers = users?.filter((user) => {
+    const matchSearch = !searchFilter || 
+      user.email?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      user.firstName?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      user.lastName?.toLowerCase().includes(searchFilter.toLowerCase());
+    const matchRole = roleFilter === "all" || user.role === roleFilter;
+    const matchStatus = statusFilter === "all" || (statusFilter === "active" ? user.isActive : !user.isActive);
+    return matchSearch && matchRole && matchStatus;
+  }) || [];
 
   const deactivateMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -194,7 +207,51 @@ export default function AdminUsers() {
             {language === "ar" ? "جميع المستخدمين" : "All Users"}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Input
+              placeholder={language === "ar" ? "ابحث بالبريد أو الاسم..." : "Search by email or name..."}
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              data-testid="input-search-users"
+            />
+            <select 
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-3 py-2 border border-border rounded-md bg-background"
+              data-testid="select-role-filter"
+            >
+              <option value="all">{language === "ar" ? "جميع الأدوار" : "All Roles"}</option>
+              <option value="user">{language === "ar" ? "مستخدم" : "User"}</option>
+              <option value="admin">{language === "ar" ? "مسؤول" : "Admin"}</option>
+            </select>
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-border rounded-md bg-background"
+              data-testid="select-status-filter"
+            >
+              <option value="all">{language === "ar" ? "جميع الحالات" : "All Status"}</option>
+              <option value="active">{language === "ar" ? "نشط" : "Active"}</option>
+              <option value="inactive">{language === "ar" ? "معطل" : "Inactive"}</option>
+            </select>
+            {(searchFilter || roleFilter !== "all" || statusFilter !== "all") && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchFilter("");
+                  setRoleFilter("all");
+                  setStatusFilter("all");
+                }}
+                data-testid="button-clear-user-filters"
+              >
+                {language === "ar" ? "مسح" : "Clear"}
+              </Button>
+            )}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {language === "ar" ? "النتائج: " : "Results: "} {filteredUsers.length}
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -208,7 +265,7 @@ export default function AdminUsers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users?.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
                   <TableCell>
                     <div className="flex items-center gap-3">
