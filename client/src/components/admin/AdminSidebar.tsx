@@ -14,7 +14,12 @@ import {
   Home,
   LogOut,
   ArrowDown,
+  Shield,
+  Headphones,
+  Settings as SettingsIcon,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
@@ -160,9 +165,37 @@ export function AdminSidebar() {
     return overviewItems;
   };
 
+  // Get role badge color and icon
+  const getRoleBadgeColor = (role?: string) => {
+    switch (role) {
+      case "admin":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100";
+      case "manager":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
+      case "support":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100";
+    }
+  };
+
+  const getRoleIcon = (role?: string) => {
+    switch (role) {
+      case "admin":
+        return <Shield className="h-3 w-3" />;
+      case "manager":
+        return <SettingsIcon className="h-3 w-3" />;
+      case "support":
+        return <Headphones className="h-3 w-3" />;
+      default:
+        return <Users className="h-3 w-3" />;
+    }
+  };
+
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-border p-4">
+      <SidebarHeader className="border-b border-border p-4 space-y-4">
+        {/* Logo Section */}
         <Link href="/admin/dashboard">
           <a className="flex items-center gap-2 px-2 py-1 hover-elevate active-elevate-2 rounded-md transition-colors">
             <GraduationCap className="h-6 w-6 text-primary" />
@@ -174,6 +207,31 @@ export function AdminSidebar() {
             </div>
           </a>
         </Link>
+
+        {/* User Info Section */}
+        <div className="flex items-center gap-3 px-2 py-3 bg-muted/30 rounded-lg">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={user?.profileImageUrl || ""} />
+            <AvatarFallback>
+              {user?.firstName?.[0] || user?.email?.[0] || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate" data-testid="text-user-name">
+              {user?.firstName} {user?.lastName}
+            </p>
+            <div className="flex items-center gap-1 mt-1">
+              <Badge className={`${getRoleBadgeColor(user?.role)} flex items-center gap-1`} data-testid={`badge-user-role-${user?.role}`}>
+                {getRoleIcon(user?.role)}
+                <span className="text-xs capitalize">
+                  {language === "ar" 
+                    ? user?.role === "admin" ? "مسؤول" : user?.role === "manager" ? "مدير" : user?.role === "support" ? "دعم" : user?.role
+                    : user?.role}
+                </span>
+              </Badge>
+            </div>
+          </div>
+        </div>
       </SidebarHeader>
       <SidebarContent className="gap-4">
         {/* Overview Section */}
