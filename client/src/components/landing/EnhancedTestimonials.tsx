@@ -68,7 +68,11 @@ export function EnhancedTestimonials() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement[]>([]);
 
-  const testimonials = testimonialsData;
+  if (!testimonialsData || testimonialsData.length === 0) {
+    return null;
+  }
+
+  const testimonials = Array.isArray(testimonialsData) ? testimonialsData : [];
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -141,15 +145,12 @@ export function EnhancedTestimonials() {
                   <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarImage src={testimonial.image} />
-                      <AvatarFallback>{testimonial.name.charAt(0)}{testimonial.ar_name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{testimonial.initials}</AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-bold text-foreground">
                         {testimonial.name}
                       </h3>
-                      <p className="text-sm font-semibold text-primary">
-                        {testimonial.ar_name}
-                      </p>
                       <p className="text-xs text-muted-foreground">
                         {testimonial.role}
                       </p>
@@ -174,9 +175,6 @@ export function EnhancedTestimonials() {
 
                 <p className="text-foreground mb-3 flex-grow">
                   "{testimonial.content}"
-                </p>
-                <p className="text-primary text-sm">
-                  "{testimonial.ar_content}"
                 </p>
               </Card>
             </div>

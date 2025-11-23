@@ -8,11 +8,14 @@ const resources = {
   ar: { translation: arTranslations },
 };
 
-i18n.use(initReactI18next).init({
-  resources,
-  lng: localStorage.getItem("language") || "en",
-  interpolation: { escapeValue: false },
-  react: { useSuspense: false },
-});
+if (!i18n.isInitialized) {
+  i18n.use(initReactI18next).init({
+    resources,
+    lng: localStorage.getItem("language") || "en",
+    fallbackLng: "en",
+    interpolation: { escapeValue: false },
+    react: { useSuspense: false },
+  });
+}
 
 export default i18n;
