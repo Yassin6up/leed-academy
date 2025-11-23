@@ -4,10 +4,11 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Card } from "@/components/ui/card";
 import { Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTranslation } from "react-i18next";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const testimonials = [
+const testimonialsData = [
   {
     name: "Ahmed Hassan",
     ar_name: "أحمد حسن",
@@ -63,8 +64,11 @@ const testimonials = [
 ];
 
 export function EnhancedTestimonials() {
+  const { t } = useTranslation();
   const sectionRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement[]>([]);
+
+  const testimonials = t("landing.testimonials.reviews", { returnObjects: true }) as typeof testimonialsData;
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -114,14 +118,13 @@ export function EnhancedTestimonials() {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="testimonials-title text-4xl md:text-5xl font-bold mb-4">
-            Success Stories
+            {t("landing.testimonials.title")}
           </h2>
           <h2 className="testimonials-title text-4xl md:text-5xl font-bold mb-4 text-primary">
-            قصص النجاح
+            {t("landing.testimonials.titleAr")}
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Join thousands of traders who have transformed their financial
-            futures with our platform
+            {t("landing.testimonials.subtitle")}
           </p>
         </div>
 
@@ -141,14 +144,14 @@ export function EnhancedTestimonials() {
                   <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarImage src={testimonial.image} />
-                      <AvatarFallback>{testimonial.initials}</AvatarFallback>
+                      <AvatarFallback>{testimonial.name.charAt(0)}{testimonial.nameAr.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-bold text-foreground">
                         {testimonial.name}
                       </h3>
                       <p className="text-sm font-semibold text-primary">
-                        {testimonial.ar_name}
+                        {testimonial.nameAr}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {testimonial.role}
@@ -176,7 +179,7 @@ export function EnhancedTestimonials() {
                   "{testimonial.content}"
                 </p>
                 <p className="text-primary text-sm">
-                  "{testimonial.ar_content}"
+                  "{testimonial.contentAr}"
                 </p>
               </Card>
             </div>

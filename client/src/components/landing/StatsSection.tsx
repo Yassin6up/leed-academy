@@ -1,28 +1,21 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useTranslation } from "react-i18next";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const stats = [
-  { number: 5000, label: "Students Worldwide", ar_label: "طالب حول العالم" },
-  { number: 150, label: "Hours of Content", ar_label: "ساعة من المحتوى" },
-  {
-    number: 98,
-    label: "Success Rate (%)",
-    ar_label: "معدل النجاح (%)",
-  },
-  {
-    number: 4.9,
-    label: "Average Rating",
-    ar_label: "متوسط التقييم",
-    decimals: 1,
-  },
-];
-
 export function StatsSection() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const numbersRef = useRef<HTMLDivElement[]>([]);
+
+  const stats = [
+    { number: 5000, key: "students", decimals: 0 },
+    { number: 150, key: "hours", decimals: 0 },
+    { number: 98, key: "successRate", decimals: 0 },
+    { number: 4.9, key: "rating", decimals: 1 },
+  ];
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -78,9 +71,9 @@ export function StatsSection() {
                 <span className="text-primary text-3xl">+</span>
               </div>
               <p className="text-lg font-semibold text-foreground">
-                {stat.label}
+                {t(`landing.stats.${stat.key}`)}
               </p>
-              <p className="text-sm text-muted-foreground">{stat.ar_label}</p>
+              <p className="text-sm text-muted-foreground">{t(`landing.stats.${stat.key}Ar`)}</p>
             </div>
           ))}
         </div>

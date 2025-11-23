@@ -3,43 +3,35 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Card } from "@/components/ui/card";
 import { Award, Users, Zap, Target } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const values = [
-  {
-    icon: Award,
-    title: "Excellence",
-    ar_title: "التميز",
-    description: "Industry-leading education standards",
-    ar_description: "معايير تعليمية رائدة في الصناعة",
-  },
-  {
-    icon: Users,
-    title: "Community",
-    ar_title: "المجتمع",
-    description: "Supportive trader network",
-    ar_description: "شبكة تاجرين داعمة",
-  },
-  {
-    icon: Zap,
-    title: "Innovation",
-    ar_title: "الابتكار",
-    description: "Cutting-edge trading strategies",
-    ar_description: "استراتيجيات تداول متقدمة",
-  },
-  {
-    icon: Target,
-    title: "Results",
-    ar_title: "النتائج",
-    description: "Proven success methods",
-    ar_description: "طرق نجاح مثبتة",
-  },
-];
+const valueIcons = [Award, Users, Zap, Target];
 
 export function WhoWeAre() {
+  const { t } = useTranslation();
   const sectionRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement[]>([]);
+
+  const values = [
+    {
+      key: "excellence",
+      icon: Award,
+    },
+    {
+      key: "community",
+      icon: Users,
+    },
+    {
+      key: "innovation",
+      icon: Zap,
+    },
+    {
+      key: "results",
+      icon: Target,
+    },
+  ];
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -85,19 +77,16 @@ export function WhoWeAre() {
       <div className="container mx-auto px-6">
         <div className="max-w-3xl mx-auto mb-16 text-center">
           <h2 className="who-we-are-title text-4xl md:text-5xl font-bold mb-4">
-            Who We Are
+            {t("landing.whoWeAre")}
           </h2>
           <h2 className="who-we-are-title text-4xl md:text-5xl font-bold mb-6 text-primary">
-            من نحن
+            {t("landing.whoWeAreAr")}
           </h2>
           <p className="text-lg text-muted-foreground mb-2">
-            Welcome to Leedacademya, where we transform aspiring traders into
-            market experts with professional-grade education and real-world
-            strategies.
+            {t("landing.description")}
           </p>
           <p className="text-lg text-muted-foreground">
-            مرحبا بك في أكاديمية ليد، حيث نحول المتداولين الطموحين إلى خبراء
-            السوق بتعليم عالي المستوى واستراتيجيات حقيقية.
+            {t("landing.descriptionAr")}
           </p>
         </div>
 
@@ -113,15 +102,15 @@ export function WhoWeAre() {
               >
                 <Card className="p-6 h-full hover-elevate text-center" data-testid={`value-card-${index}`}>
                   <Icon className="h-12 w-12 mx-auto mb-4 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">{value.title}</h3>
+                  <h3 className="text-xl font-bold mb-2">{t(`landing.values.${value.key}`)}</h3>
                   <h3 className="text-xl font-bold mb-4 text-primary">
-                    {value.ar_title}
+                    {t(`landing.values.${value.key}Ar`)}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-2">
-                    {value.description}
+                    {t(`landing.values.${value.key}Desc`)}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {value.ar_description}
+                    {t(`landing.values.${value.key}DescAr`)}
                   </p>
                 </Card>
               </div>

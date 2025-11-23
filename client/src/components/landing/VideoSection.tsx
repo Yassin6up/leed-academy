@@ -3,10 +3,12 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export function VideoSection() {
+  const { t } = useTranslation();
   const sectionRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -58,13 +60,13 @@ export function VideoSection() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Watch Our Story
+              {t("landing.video.title")}
             </h2>
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-primary">
-              شاهد قصتنا
+              {t("landing.video.titleAr")}
             </h2>
             <p className="text-lg text-muted-foreground">
-              Discover how traders transform their success with our platform
+              {t("landing.video.subtitle")}
             </p>
           </div>
 
@@ -117,36 +119,17 @@ export function VideoSection() {
           </div>
 
           <div className="mt-12 grid md:grid-cols-3 gap-6">
-            {[
-              {
-                title: "Live Sessions",
-                ar_title: "جلسات مباشرة",
-                desc: "Real-time market analysis",
-                ar_desc: "تحليل السوق في الوقت الفعلي",
-              },
-              {
-                title: "Expert Mentors",
-                ar_title: "مدربون خبراء",
-                desc: "Learn from industry pros",
-                ar_desc: "التعلم من محترفي الصناعة",
-              },
-              {
-                title: "24/7 Support",
-                ar_title: "دعم 24/7",
-                desc: "Always here to help",
-                ar_desc: "نحن هنا للمساعدة دائما",
-              },
-            ].map((item, index) => (
+            {["liveSessions", "mentors", "support"].map((key, index) => (
               <div key={index} className="text-center" data-testid={`video-benefit-${index}`}>
-                <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+                <h3 className="text-xl font-bold mb-2">{t(`landing.video.benefits.${key}`)}</h3>
                 <h3 className="text-lg font-bold mb-3 text-primary">
-                  {item.ar_title}
+                  {t(`landing.video.benefits.${key}Ar`)}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-1">
-                  {item.desc}
+                  {t(`landing.video.benefits.${key}Desc`)}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {item.ar_desc}
+                  {t(`landing.video.benefits.${key}DescAr`)}
                 </p>
               </div>
             ))}
