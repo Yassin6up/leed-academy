@@ -144,14 +144,14 @@ export function EnhancedTestimonials() {
                   <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarImage src={testimonial.image} />
-                      <AvatarFallback>{testimonial.name.charAt(0)}{testimonial.nameAr.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{testimonial.name.charAt(0)}{testimonial.ar_name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-bold text-foreground">
                         {testimonial.name}
                       </h3>
                       <p className="text-sm font-semibold text-primary">
-                        {testimonial.nameAr}
+                        {testimonial.ar_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {testimonial.role}
@@ -179,7 +179,7 @@ export function EnhancedTestimonials() {
                   "{testimonial.content}"
                 </p>
                 <p className="text-primary text-sm">
-                  "{testimonial.contentAr}"
+                  "{testimonial.ar_content}"
                 </p>
               </Card>
             </div>
