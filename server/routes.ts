@@ -1461,12 +1461,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/payments", isAuthenticated, requireAdmin, async (_req, res) => {
+  app.get("/api/admin/payments", isAuthenticated, requireAdminRole, async (_req, res) => {
     const payments = await storage.getAllPayments();
     res.json(payments);
   });
 
-  app.patch("/api/admin/payments/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/payments/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const payment = await storage.updatePayment(req.params.id, {
         status: req.body.status,
@@ -1807,7 +1807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/withdrawals/admin", requireAdmin, async (req, res) => {
+  app.get("/api/withdrawals/admin", requireAdminRole, async (req, res) => {
     try {
       const withdrawals = await storage.getAllWithdrawalRequests();
       
@@ -1873,7 +1873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/withdrawals/:id/approve", requireAdmin, async (req, res) => {
+  app.post("/api/withdrawals/:id/approve", requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
       const { adminNotes } = req.body;
@@ -1887,7 +1887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/withdrawals/:id/reject", requireAdmin, async (req, res) => {
+  app.post("/api/withdrawals/:id/reject", requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
       const { adminNotes } = req.body;
