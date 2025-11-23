@@ -262,6 +262,7 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
         {/* System Section */}
         <SidebarGroup>

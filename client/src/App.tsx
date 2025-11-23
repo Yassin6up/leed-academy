@@ -31,6 +31,7 @@ import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminWithdrawals from "@/pages/admin/AdminWithdrawals";
 import AdminPricing from "@/pages/admin/AdminPricing";
 import AdminLogs from "@/pages/admin/AdminLogs";
+import AdminRoles from "@/pages/admin/AdminRoles";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -130,6 +131,13 @@ function Router() {
             {() => (
               <AdminLayout>
                 <AdminLogs />
+              </AdminLayout>
+            )}
+          </Route>
+          <Route path="/admin/roles">
+            {() => (
+              <AdminLayout>
+                <AdminRoles />
               </AdminLayout>
             )}
           </Route>

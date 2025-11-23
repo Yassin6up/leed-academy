@@ -27,6 +27,16 @@ import express from "express";
 import { HLSConverter } from "./hlsUtils";
 import crypto from "crypto";
 
+// Simple slugify function
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 // Auth middleware
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const userId = (req.session as any)?.userId;
@@ -1713,11 +1723,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let logs;
       
       if (startDate && endDate) {
-        logs = await storage.getAdminLogsByDateRange(new Date(startDate as string), new Date(endDate as string));
+        const start = new Date(startDate as string);
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        logs = await storage.getAdminLogsByDateRange(start, end);
       } else {
         logs = await storage.getAllAdminLogs();
       }
       res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update user role endpoint (admin only)
+  app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+      const userId = (req.session as any)?.userId;
+
+      if (!["user", "support", "manager", "admin"].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      const user = await storage.updateUser(id, { role });
+      await logAdminAction(userId, "update-role", "users", `Updated user role to ${role}`, { userId: id, role });
+      res.json(user);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1741,8 +1773,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { adminNotes } = req.body;
+      const userId = (req.session as any)?.userId;
 
       const withdrawal = await storage.rejectWithdrawal(id, adminNotes);
+      await logAdminAction(userId, "reject", "withdrawals", `Rejected withdrawal request ${id}`);
       res.json(withdrawal);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
