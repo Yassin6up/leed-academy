@@ -1148,6 +1148,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (req.body.status === "approved") {
+        // Get the user being paid for
+        const user = await storage.getUser(payment.userId);
+        
         await storage.updateUser(payment.userId, {
           subscriptionStatus: "active",
         });
@@ -1157,6 +1160,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateSubscription(subscription.id, {
             status: "active",
           });
+        }
+
+        // Credit referrer with $10 if user was referred
+        if (user && user.referredBy) {
+          const referrer = await storage.getUserByReferralCode(user.referredBy);
+          if (referrer) {
+            await storage.addReferralEarnings(referrer.id, payment.userId, 10);
+            console.log(`Credited $10 to referrer ${referrer.email} for referral of ${user.email}`);
+          }
         }
       }
 
