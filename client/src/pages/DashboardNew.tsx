@@ -4,7 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { useLanguage } from "@/lib/i18n";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BookOpen, CreditCard, Users, Settings, Star } from "lucide-react";
+import { BookOpen, CreditCard, Users, Settings, Star, Home, LogOut } from "lucide-react";
 import MyCourses from "@/components/dashboard/tabs/MyCourses";
 import MySubscription from "@/components/dashboard/tabs/MySubscription";
 import JoinGroupTab from "@/components/dashboard/tabs/JoinGroupTab";
@@ -13,6 +13,7 @@ import RatingsTab from "@/components/dashboard/tabs/RatingsTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { queryClient } from "@/lib/queryClient";
 
 export default function DashboardNew() {
   const { language } = useLanguage();
@@ -46,6 +47,33 @@ export default function DashboardNew() {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     navigate(`/dashboard?tab=${value}`, { replace: true });
+  };
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      navigate("/");
+      
+      toast({
+        title: language === "ar" ? "تم تسجيل الخروج" : "Logged out",
+        description: language === "ar" ? "تم تسجيل خروجك بنجاح" : "You have been logged out successfully",
+      });
+    } catch (error) {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: language === "ar" ? "فشل تسجيل الخروج" : "Logout failed",
+        variant: "destructive",
+      });
+    }
   };
 
   const tabs = [
@@ -98,7 +126,7 @@ export default function DashboardNew() {
           <div className="flex flex-col md:flex-row gap-0 md:gap-6 py-0 md:py-8">
             {/* Desktop Sidebar - Hidden on Mobile */}
             <aside className="hidden md:block w-64 flex-shrink-0">
-              <div className="sticky top-24 space-y-2 p-4 bg-muted rounded-lg">
+              <div className="sticky top-24 space-y-4 p-4 bg-muted rounded-lg">
                 <h2 className="px-4 py-2 text-lg font-heading font-bold text-foreground">
                   {language === "ar" ? "لوحة التحكم" : "Dashboard"}
                 </h2>
@@ -119,6 +147,26 @@ export default function DashboardNew() {
                     </Button>
                   ))}
                 </nav>
+                <div className="border-t border-border pt-4 space-y-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 text-base"
+                    onClick={() => navigate("/")}
+                    data-testid="button-dashboard-home"
+                  >
+                    <Home className="h-5 w-5" />
+                    {language === "ar" ? "الرئيسية" : "Home"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="w-full justify-start gap-3 text-base"
+                    onClick={handleLogout}
+                    data-testid="button-dashboard-logout"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    {language === "ar" ? "تسجيل الخروج" : "Logout"}
+                  </Button>
+                </div>
               </div>
             </aside>
 

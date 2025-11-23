@@ -35,8 +35,8 @@ import { useState } from "react";
 export default function AdminPayments() {
   const { language } = useLanguage();
   const { toast } = useToast();
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [methodFilter, setMethodFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [methodFilter, setMethodFilter] = useState<string>("all");
   const [searchFilter, setSearchFilter] = useState<string>("");
 
   const { data: payments, isLoading } = useQuery<Payment[]>({
@@ -110,7 +110,7 @@ export default function AdminPayments() {
               onChange={(e) => setSearchFilter(e.target.value)}
               data-testid="input-search-payments"
             />
-            <Select value={statusFilter || "all"} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger data-testid="select-status-filter">
                 <SelectValue placeholder={language === "ar" ? "كل الحالات" : "All Status"} />
               </SelectTrigger>
@@ -121,7 +121,7 @@ export default function AdminPayments() {
                 <SelectItem value="rejected">{language === "ar" ? "مرفوض" : "Rejected"}</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={methodFilter || "all"} onValueChange={setMethodFilter}>
+            <Select value={methodFilter} onValueChange={setMethodFilter}>
               <SelectTrigger data-testid="select-method-filter">
                 <SelectValue placeholder={language === "ar" ? "كل الطرق" : "All Methods"} />
               </SelectTrigger>
@@ -131,7 +131,7 @@ export default function AdminPayments() {
                 <SelectItem value="crypto">{language === "ar" ? "عملات رقمية" : "Crypto"}</SelectItem>
               </SelectContent>
             </Select>
-            {((statusFilter && statusFilter !== "all") || (methodFilter && methodFilter !== "all") || searchFilter) && (
+            {(searchFilter) && (
               <Button
                 variant="outline"
                 onClick={() => {
