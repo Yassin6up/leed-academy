@@ -26,6 +26,14 @@ export function Header() {
   // Check if user has admin panel access (admin, manager, or support)
   const hasAdminAccess = user?.role === "admin" || user?.role === "manager" || user?.role === "support";
 
+  // Get admin panel route based on role
+  const getAdminRoute = () => {
+    if (user?.role === "support") {
+      return "/admin/users";
+    }
+    return "/admin/dashboard"; // admin and manager
+  };
+
   const handleLogout = async () => {
     try {
       const response = await fetch("/api/auth/logout", {
@@ -165,7 +173,7 @@ export function Header() {
                   </DropdownMenuItem>
                   {hasAdminAccess && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin" data-testid="link-admin">
+                      <Link href={getAdminRoute()} data-testid="link-admin">
                         {t("nav.admin")}
                       </Link>
                     </DropdownMenuItem>
