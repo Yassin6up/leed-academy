@@ -440,6 +440,8 @@ export const meetingsRelations = relations(meetings, ({ one }) => ({
 export const adminLogs = pgTable("admin_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   adminId: varchar("admin_id").notNull().references(() => users.id),
+  adminName: varchar("admin_name", { length: 255 }).notNull(),
+  adminEmail: varchar("admin_email", { length: 255 }).notNull(),
   action: varchar("action", { length: 100 }).notNull(), // create, update, delete, approve, reject, etc
   page: varchar("page", { length: 100 }).notNull(), // payments, users, withdrawals, courses, pricing, etc
   description: text("description"),
@@ -452,4 +454,4 @@ export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({
   createdAt: true,
 });
 export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
-export type AdminLog = typeof adminLogs.$inferSelect;
+export type AdminLog = typeof adminLogs.$inferSelect & { adminName: string; adminEmail: string };

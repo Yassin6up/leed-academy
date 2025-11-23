@@ -82,8 +82,14 @@ async function requireSupportRole(req: Request, res: Response, next: NextFunctio
 // Log helper
 async function logAdminAction(userId: string, action: string, page: string, description: string, details?: any) {
   try {
+    const user = await storage.getUser(userId);
+    const adminName = user ? `${user.firstName} ${user.lastName}` : "Unknown";
+    const adminEmail = user?.email || "unknown@example.com";
+    
     await storage.createAdminLog({
       adminId: userId,
+      adminName,
+      adminEmail,
       action,
       page,
       description,
@@ -1834,8 +1840,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Logs endpoints
-  app.get("/api/admin/logs", requireAdminRole, async (req, res) => {
+  // Admin Logs endpoints (Admin only)
+  app.get("/api/admin/logs", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
       let logs;
