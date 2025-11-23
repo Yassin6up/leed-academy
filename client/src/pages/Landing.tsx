@@ -4,6 +4,10 @@ import { Hero } from "@/components/landing/Hero";
 import { MarketTicker } from "@/components/landing/MarketTicker";
 import { Features } from "@/components/landing/Features";
 import { Testimonials } from "@/components/landing/Testimonials";
+import { WhoWeAre } from "@/components/landing/WhoWeAre";
+import { VideoSection } from "@/components/landing/VideoSection";
+import { EnhancedTestimonials } from "@/components/landing/EnhancedTestimonials";
+import { StatsSection } from "@/components/landing/StatsSection";
 
 export default function Landing() {
   return (
@@ -12,7 +16,11 @@ export default function Landing() {
       <main className="pt-20">
         <Hero />
         <MarketTicker />
+        <WhoWeAre />
+        <StatsSection />
+        <VideoSection />
         <Features />
+        <EnhancedTestimonials />
         <Testimonials />
       </main>
       <Footer />
