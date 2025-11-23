@@ -355,15 +355,27 @@ export default function ReferralTab() {
       )}
 
       {/* Withdrawal History */}
-      {withdrawals.length > 0 && (
-        <Card data-testid="card-withdrawal-history">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ArrowDown className="h-5 w-5" />
-              {language === "ar" ? "سجل الانسحابات" : "Withdrawal History"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      <Card data-testid="card-withdrawal-history">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowDown className="h-5 w-5" />
+            {language === "ar" ? "سجل الانسحابات" : "Withdrawal History"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {withdrawals.length === 0 ? (
+            <div className="text-center py-8">
+              <ArrowDown className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+              <p className="text-muted-foreground mb-2">
+                {language === "ar" ? "لا توجد طلبات انسحاب بعد" : "No withdrawal requests yet"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {language === "ar" 
+                  ? "عندما تقوم بطلب سحب، سيظهر هنا" 
+                  : "When you request a withdrawal, it will appear here"}
+              </p>
+            </div>
+          ) : (
             <div className="space-y-3">
               {withdrawals.map((withdrawal) => (
                 <div
@@ -397,9 +409,9 @@ export default function ReferralTab() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
       {/* Referrals List */}
       {stats?.referrals && stats.referrals.length > 0 && (
