@@ -68,7 +68,7 @@ export function EnhancedTestimonials() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement[]>([]);
 
-  const testimonials = t("landing.testimonials.reviews", { returnObjects: true }) as typeof testimonialsData;
+  const testimonials = testimonialsData;
 
   useEffect(() => {
     if (!sectionRef.current) return;
