@@ -113,6 +113,11 @@ export function AdminSidebar() {
 
   const systemItems = [
     {
+      title: language === "ar" ? "السجلات" : "Logs",
+      icon: BarChart3,
+      path: "/admin/logs",
+    },
+    {
       title: language === "ar" ? "الإعدادات" : "Settings",
       icon: Settings,
       path: "/admin/settings",

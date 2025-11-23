@@ -45,7 +45,7 @@ import {
   type AdminLog,
   type InsertAdminLog,
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, lte } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -928,10 +928,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(adminLogs)
-      .where(and(
-        (col) => col.gte(adminLogs.createdAt, startDate),
-        (col) => col.lte(adminLogs.createdAt, endDate)
-      ))
+      .where(and(gte(adminLogs.createdAt, startDate), lte(adminLogs.createdAt, endDate)))
       .orderBy(desc(adminLogs.createdAt));
   }
 

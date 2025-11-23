@@ -30,6 +30,7 @@ import AdminMeetings from "@/pages/admin/AdminMeetings";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminWithdrawals from "@/pages/admin/AdminWithdrawals";
 import AdminPricing from "@/pages/admin/AdminPricing";
+import AdminLogs from "@/pages/admin/AdminLogs";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -122,6 +123,13 @@ function Router() {
             {() => (
               <AdminLayout>
                 <AdminWithdrawals />
+              </AdminLayout>
+            )}
+          </Route>
+          <Route path="/admin/logs">
+            {() => (
+              <AdminLayout>
+                <AdminLogs />
               </AdminLayout>
             )}
           </Route>

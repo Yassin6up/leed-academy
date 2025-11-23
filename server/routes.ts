@@ -41,6 +41,49 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Role-based access middleware
+async function requireAdminRole(req: Request, res: Response, next: NextFunction) {
+  const userId = (req.session as any)?.userId;
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const user = await storage.getUser(userId);
+  if (!user || (user.role !== "admin" && user.role !== "manager" && user.role !== "support")) {
+    return res.status(403).json({ message: "Forbidden - Admin role required" });
+  }
+  (req as any).user = user;
+  next();
+}
+
+// Support/Manager specific access check
+async function requireSupportRole(req: Request, res: Response, next: NextFunction) {
+  const userId = (req.session as any)?.userId;
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const user = await storage.getUser(userId);
+  if (!user || (user.role !== "support" && user.role !== "admin")) {
+    return res.status(403).json({ message: "Forbidden - Support role required" });
+  }
+  (req as any).user = user;
+  next();
+}
+
+// Log helper
+async function logAdminAction(userId: string, action: string, page: string, description: string, details?: any) {
+  try {
+    await storage.createAdminLog({
+      adminId: userId,
+      action,
+      page,
+      description,
+      details,
+    });
+  } catch (error) {
+    console.error("Failed to log admin action:", error);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth with session management
   await setupAuth(app);
@@ -1663,12 +1706,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Logs endpoints
+  app.get("/api/admin/logs", requireAdminRole, async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      let logs;
+      
+      if (startDate && endDate) {
+        logs = await storage.getAdminLogsByDateRange(new Date(startDate as string), new Date(endDate as string));
+      } else {
+        logs = await storage.getAllAdminLogs();
+      }
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/withdrawals/:id/approve", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const { adminNotes } = req.body;
+      const userId = (req.session as any)?.userId;
 
       const withdrawal = await storage.approveWithdrawal(id, adminNotes);
+      await logAdminAction(userId, "approve", "withdrawals", `Approved withdrawal request ${id}`);
       res.json(withdrawal);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

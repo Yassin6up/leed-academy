@@ -80,7 +80,7 @@ export default function AdminLogs() {
                       {log.page}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {format(new Date(log.createdAt), "MMM dd, yyyy HH:mm:ss")}
+                      {log.createdAt && format(new Date(log.createdAt), "MMM dd, yyyy HH:mm:ss")}
                     </span>
                   </div>
                   <p className="text-sm text-foreground" data-testid={`text-description-${log.id}`}>
