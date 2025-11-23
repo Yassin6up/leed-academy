@@ -1563,7 +1563,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Serve video file with security headers
       if (lesson.videoFilePath) {
-        const videoPath = path.join(process.cwd(), lesson.videoFilePath);
+        // videoFilePath is already the full path from database
+        const videoPath = lesson.videoFilePath;
+
+        // Check if file exists
+        if (!fs.existsSync(videoPath)) {
+          return res.status(404).json({ message: "Video file not found" });
+        }
 
         // Set security headers to prevent caching and downloading
         res.setHeader("Content-Type", "video/mp4");
@@ -1577,7 +1583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Stream video file
         res.sendFile(videoPath);
       } else if (lesson.videoUrl) {
-        // If external URL, redirect securely
+        // If external URL, return it
         res.json({ url: lesson.videoUrl });
       } else {
         return res.status(404).json({ message: "Video not found" });
