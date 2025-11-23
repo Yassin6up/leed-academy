@@ -1914,19 +1914,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update user role endpoint (admin only)
+  // Update user role endpoint
   app.patch("/api/admin/users/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
       const { role } = req.body;
-      const userId = (req.session as any)?.userId;
+      const currentUserId = (req.session as any)?.userId;
+      const currentUser = await storage.getUser(currentUserId);
+      const targetUser = await storage.getUser(id);
+
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
       if (!["user", "support", "manager", "admin"].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
 
+      // Role hierarchy check - only admin can change roles to/from admin
+      if (currentUser?.role === "manager" || currentUser?.role === "support") {
+        // Manager and support cannot change admin roles or assign admin role
+        if (targetUser.role === "admin" || role === "admin") {
+          return res.status(403).json({ message: "Only admins can change admin roles or assign admin role" });
+        }
+        // Manager and support can only change to support or user roles
+        if (role !== "support" && role !== "user") {
+          return res.status(403).json({ message: "Manager can only change roles to support or user" });
+        }
+      }
+      // Admin can change any role
+
       const user = await storage.updateUser(id, { role });
-      await logAdminAction(userId, "update-role", "users", `Updated user role to ${role}`, { userId: id, role });
+      await logAdminAction(currentUserId, "update-role", "users", `Updated user role to ${role}`, { userId: id, role });
       res.json(user);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
