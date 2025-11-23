@@ -59,11 +59,8 @@ export function VideoSection() {
       <div className="container mx-auto px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
               {t("landing.video.title")}
-            </h2>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-primary">
-              {t("landing.video.titleAr")}
             </h2>
             <p className="text-lg text-muted-foreground">
               {t("landing.video.subtitle")}
@@ -121,15 +118,9 @@ export function VideoSection() {
           <div className="mt-12 grid md:grid-cols-3 gap-6">
             {["liveSessions", "mentors", "support"].map((key, index) => (
               <div key={index} className="text-center" data-testid={`video-benefit-${index}`}>
-                <h3 className="text-xl font-bold mb-2">{t(`landing.video.benefits.${key}`)}</h3>
-                <h3 className="text-lg font-bold mb-3 text-primary">
-                  {t(`landing.video.benefits.${key}Ar`)}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-1">
-                  {t(`landing.video.benefits.${key}Desc`)}
-                </p>
+                <h3 className="text-xl font-bold mb-3">{t(`landing.video.benefits.${key}`)}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {t(`landing.video.benefits.${key}DescAr`)}
+                  {t(`landing.video.benefits.${key}Desc`)}
                 </p>
               </div>
             ))}

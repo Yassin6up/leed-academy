@@ -10,102 +10,38 @@
   },
   "landing": {
     "whoWeAre": "Who We Are",
-    "whoWeAreAr": "من نحن",
     "description": "Welcome to Leedacademya, where we transform aspiring traders into market experts with professional-grade education and real-world strategies.",
-    "descriptionAr": "مرحبا بك في أكاديمية ليد، حيث نحول المتداولين الطموحين إلى خبراء السوق بتعليم عالي المستوى واستراتيجيات حقيقية.",
     "values": {
       "excellence": "Excellence",
-      "excellenceAr": "التميز",
       "excellenceDesc": "Industry-leading education standards",
-      "excellenceDescAr": "معايير تعليمية رائدة في الصناعة",
       "community": "Community",
-      "communityAr": "المجتمع",
       "communityDesc": "Supportive trader network",
-      "communityDescAr": "شبكة تاجرين داعمة",
       "innovation": "Innovation",
-      "innovationAr": "الابتكار",
       "innovationDesc": "Cutting-edge trading strategies",
-      "innovationDescAr": "استراتيجيات تداول متقدمة",
       "results": "Results",
-      "resultsAr": "النتائج",
-      "resultsDesc": "Proven success methods",
-      "resultsDescAr": "طرق نجاح مثبتة"
+      "resultsDesc": "Proven success methods"
     },
     "stats": {
       "students": "Students Worldwide",
-      "studentsAr": "طالب حول العالم",
       "hours": "Hours of Content",
-      "hoursAr": "ساعة من المحتوى",
       "successRate": "Success Rate (%)",
-      "successRateAr": "معدل النجاح (%)",
-      "rating": "Average Rating",
-      "ratingAr": "متوسط التقييم"
+      "rating": "Average Rating"
     },
     "video": {
       "title": "Watch Our Story",
-      "titleAr": "شاهد قصتنا",
       "subtitle": "Discover how traders transform their success with our platform",
       "benefits": {
         "liveSessions": "Live Sessions",
-        "liveSessionsAr": "جلسات مباشرة",
         "liveSessionsDesc": "Real-time market analysis",
-        "liveSessionsDescAr": "تحليل السوق في الوقت الفعلي",
         "mentors": "Expert Mentors",
-        "mentorsAr": "مدربون خبراء",
         "mentorsDesc": "Learn from industry pros",
-        "mentorsDescAr": "التعلم من محترفي الصناعة",
         "support": "24/7 Support",
-        "supportAr": "دعم 24/7",
-        "supportDesc": "Always here to help",
-        "supportDescAr": "نحن هنا للمساعدة دائما"
+        "supportDesc": "Always here to help"
       }
     },
     "testimonials": {
       "title": "Success Stories",
-      "titleAr": "قصص النجاح",
-      "subtitle": "Join thousands of traders who have transformed their financial futures with our platform",
-      "reviews": [
-        {
-          "name": "Ahmed Hassan",
-          "nameAr": "أحمد حسن",
-          "role": "Forex Trader",
-          "roleAr": "متداول فوركس",
-          "content": "Leedacademya transformed my trading journey. The strategies taught here are practical and profitable.",
-          "contentAr": "حولت أكاديمية ليد رحلتي في التداول. الاستراتيجيات المدرسة هنا عملية ومربحة.",
-          "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-          "rating": 5
-        },
-        {
-          "name": "Sarah Johnson",
-          "nameAr": "سارة جونسون",
-          "role": "Crypto Investor",
-          "roleAr": "مستثمر عملات رقمية",
-          "content": "Best investment in my trading education. The mentors are exceptional and supportive.",
-          "contentAr": "أفضل استثمار في تعليمي للتداول. المدربون استثنائيون وداعمون جدا.",
-          "image": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-          "rating": 5
-        },
-        {
-          "name": "Mohammed Ali",
-          "nameAr": "محمد علي",
-          "role": "Stock Trader",
-          "roleAr": "متداول الأسهم",
-          "content": "Clear explanations, real-world examples, and consistent profits. Highly recommended!",
-          "contentAr": "شروحات واضحة وأمثلة حقيقية وأرباح مستمرة. أنصح بها بشدة!",
-          "image": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
-          "rating": 5
-        },
-        {
-          "name": "Emily Chen",
-          "nameAr": "إيميلي تشين",
-          "role": "Professional Trader",
-          "roleAr": "متداول محترف",
-          "content": "The community aspect is amazing. Learning together with other traders accelerates growth.",
-          "contentAr": "جانب المجتمع رائع جدا. التعلم مع متداولين آخرين يسرع النمو.",
-          "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-          "rating": 4.5
-        }
-      ]
+      "subtitle": "Join thousands of traders who have transformed their financial futures with our platform"
     }
   }
 }

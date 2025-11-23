@@ -76,17 +76,11 @@ export function WhoWeAre() {
     <section ref={sectionRef} className="py-20 bg-background" data-testid="section-who-we-are">
       <div className="container mx-auto px-6">
         <div className="max-w-3xl mx-auto mb-16 text-center">
-          <h2 className="who-we-are-title text-4xl md:text-5xl font-bold mb-4">
+          <h2 className="who-we-are-title text-4xl md:text-5xl font-bold mb-6">
             {t("landing.whoWeAre")}
           </h2>
-          <h2 className="who-we-are-title text-4xl md:text-5xl font-bold mb-6 text-primary">
-            {t("landing.whoWeAreAr")}
-          </h2>
-          <p className="text-lg text-muted-foreground mb-2">
-            {t("landing.description")}
-          </p>
           <p className="text-lg text-muted-foreground">
-            {t("landing.descriptionAr")}
+            {t("landing.description")}
           </p>
         </div>
 
@@ -102,15 +96,9 @@ export function WhoWeAre() {
               >
                 <Card className="p-6 h-full hover-elevate text-center" data-testid={`value-card-${index}`}>
                   <Icon className="h-12 w-12 mx-auto mb-4 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">{t(`landing.values.${value.key}`)}</h3>
-                  <h3 className="text-xl font-bold mb-4 text-primary">
-                    {t(`landing.values.${value.key}Ar`)}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {t(`landing.values.${value.key}Desc`)}
-                  </p>
+                  <h3 className="text-xl font-bold mb-4">{t(`landing.values.${value.key}`)}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {t(`landing.values.${value.key}DescAr`)}
+                    {t(`landing.values.${value.key}Desc`)}
                   </p>
                 </Card>
               </div>

@@ -73,7 +73,6 @@ export function StatsSection() {
               <p className="text-lg font-semibold text-foreground">
                 {t(`landing.stats.${stat.key}`)}
               </p>
-              <p className="text-sm text-muted-foreground">{t(`landing.stats.${stat.key}Ar`)}</p>
             </div>
           ))}
         </div>
