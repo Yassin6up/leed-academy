@@ -1093,6 +1093,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PDF Resource upload
+  const resourceUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => {
+        const dir = path.join(process.cwd(), "uploads", "resources");
+        ensureDir(dir);
+        cb(null, dir);
+      },
+      filename: (_req, file, cb) => {
+        cb(null, generateUniqueFilename(file.originalname, "resource"));
+      },
+    }),
+    limits: { fileSize: 100 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+      if (!allowedTypes.includes(file.mimetype)) {
+        return cb(new Error("Only PDF, images, and documents are allowed"));
+      }
+      cb(null, true);
+    },
+  });
+
   // Course Resources Routes
   app.get("/api/courses/:courseId/resources", async (req, res) => {
     try {
@@ -1103,14 +1125,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/courses/:courseId/resources", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/admin/courses/:courseId/resources", isAuthenticated, requireAdmin, (req, res) => {
+    resourceUpload.single("file")(req, res, async (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "File size exceeds 100MB limit" });
+        }
+        return res.status(400).json({ message: `Upload error: ${err.message}` });
+      }
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+
+      try {
+        const { courseId } = req.params;
+        const { titleEn, titleAr, descriptionEn, descriptionAr, resourceType } = req.body;
+        const file = req.file;
+
+        if (!titleEn || !titleAr) {
+          if (file) fs.unlinkSync(file.path);
+          return res.status(400).json({ message: "Title is required" });
+        }
+
+        if (resourceType === "link") {
+          const { linkUrl } = req.body;
+          if (!linkUrl) {
+            if (file) fs.unlinkSync(file.path);
+            return res.status(400).json({ message: "Link URL is required" });
+          }
+          const resource = await storage.createCourseResource({
+            courseId,
+            titleEn,
+            titleAr,
+            descriptionEn: descriptionEn || "",
+            descriptionAr: descriptionAr || "",
+            fileUrl: linkUrl,
+            fileName: titleEn,
+            fileType: "link",
+            fileSize: 0,
+            order: 0,
+          });
+          return res.json(resource);
+        }
+
+        if (!file) {
+          return res.status(400).json({ message: "File is required for file upload" });
+        }
+
+        const resourceDir = path.join(process.cwd(), "uploads", "resources", courseId);
+        ensureDir(resourceDir);
+        const finalPath = path.join(resourceDir, path.basename(file.path));
+        fs.renameSync(file.path, finalPath);
+
+        const resource = await storage.createCourseResource({
+          courseId,
+          titleEn,
+          titleAr,
+          descriptionEn: descriptionEn || "",
+          descriptionAr: descriptionAr || "",
+          fileUrl: `/uploads/resources/${courseId}/${path.basename(finalPath)}`,
+          fileName: file.originalname,
+          fileType: file.mimetype,
+          fileSize: file.size,
+          order: 0,
+        });
+
+        res.json(resource);
+      } catch (error: any) {
+        if (req.file && fs.existsSync(req.file.path)) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch {}
+        }
+        res.status(400).json({ message: error.message });
+      }
+    });
+  });
+
+  app.post("/api/admin/courses/:courseId/resources/link", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { insertCourseResourceSchema } = await import("@shared/schema");
-      const validated = insertCourseResourceSchema.parse({
-        ...req.body,
-        courseId: req.params.courseId,
+      const { courseId } = req.params;
+      const { titleEn, titleAr, descriptionEn, descriptionAr, linkUrl } = req.body;
+
+      const resource = await storage.createCourseResource({
+        courseId,
+        titleEn,
+        titleAr,
+        descriptionEn: descriptionEn || "",
+        descriptionAr: descriptionAr || "",
+        fileUrl: linkUrl,
+        fileName: titleEn,
+        fileType: "link",
+        fileSize: 0,
+        order: 0,
       });
-      const resource = await storage.createCourseResource(validated);
       res.json(resource);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
