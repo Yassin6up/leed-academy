@@ -469,6 +469,10 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async deleteSubscriptionPlan(id: string): Promise<void> {
+    await db.delete(subscriptionPlans).where(eq(subscriptionPlans.id, id));
+  }
+
   // Subscription methods
   async getUserSubscription(userId: string): Promise<Subscription | undefined> {
     const result = await db

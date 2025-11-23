@@ -316,6 +316,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(plan);
   });
 
+  // Admin pricing routes
+  app.post("/api/admin/subscription-plans", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { nameEn, nameAr, descriptionEn, descriptionAr, price, durationDays, featuresEn, featuresAr, isPopular } = req.body;
+      const plan = await storage.createSubscriptionPlan({
+        nameEn, nameAr, descriptionEn, descriptionAr,
+        price: parseFloat(price).toString(),
+        durationDays: parseInt(durationDays),
+        featuresEn: featuresEn || [],
+        featuresAr: featuresAr || [],
+        isPopular: isPopular || false,
+      });
+      res.json(plan);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to create plan" });
+    }
+  });
+
+  app.patch("/api/admin/subscription-plans/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { nameEn, nameAr, descriptionEn, descriptionAr, price, durationDays, featuresEn, featuresAr, isPopular } = req.body;
+      const plan = await storage.updateSubscriptionPlan(req.params.id, {
+        nameEn, nameAr, descriptionEn, descriptionAr,
+        price: price ? parseFloat(price).toString() : undefined,
+        durationDays: durationDays ? parseInt(durationDays) : undefined,
+        featuresEn: featuresEn || undefined,
+        featuresAr: featuresAr || undefined,
+        isPopular: isPopular !== undefined ? isPopular : undefined,
+      });
+      res.json(plan);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to update plan" });
+    }
+  });
+
+  app.delete("/api/admin/subscription-plans/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteSubscriptionPlan(req.params.id);
+      res.json({ message: "Plan deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to delete plan" });
+    }
+  });
+
   app.get("/api/testimonials", async (_req, res) => {
     const testimonials = await storage.getAllTestimonials();
     res.json(testimonials);
