@@ -59,11 +59,20 @@ export default function AdminCourses() {
   const [editUploadProgress, setEditUploadProgress] = useState<number>(0);
   const [lessonVideoFile, setLessonVideoFile] = useState<File | null>(null);
   const [lessonUploadProgress, setLessonUploadProgress] = useState<number>(0);
+  const [resourceFile, setResourceFile] = useState<File | null>(null);
+  const [resourceUploadProgress, setResourceUploadProgress] = useState<number>(0);
+  const [resourceType, setResourceType] = useState<"file" | "link">("file");
+  const [resourceLinkUrl, setResourceLinkUrl] = useState<string>("");
+  const [resourceTitleEn, setResourceTitleEn] = useState<string>("");
+  const [resourceTitleAr, setResourceTitleAr] = useState<string>("");
+  const [resourceDescEn, setResourceDescEn] = useState<string>("");
+  const [resourceDescAr, setResourceDescAr] = useState<string>("");
   const [searchFilter, setSearchFilter] = useState<string>("");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const resourceFileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["/api/admin/courses"],
@@ -472,6 +481,87 @@ export default function AdminCourses() {
     setSelectedCourseId(courseId);
     setLessonDialogOpen(true);
   };
+
+  const openResourceDialog = (courseId: string) => {
+    setSelectedResourceCourseId(courseId);
+    setResourceFile(null);
+    setResourceLinkUrl("");
+    setResourceTitleEn("");
+    setResourceTitleAr("");
+    setResourceDescEn("");
+    setResourceDescAr("");
+    setResourceType("file");
+    refetchResources();
+    setResourceDialogOpen(true);
+  };
+
+  const handleResourceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+      if (!allowedTypes.includes(file.type)) {
+        toast({ title: language === "ar" ? "خطأ" : "Error", description: language === "ar" ? "فقط PDF والصور والمستندات مدعومة" : "Only PDF, images, and documents are allowed", variant: "destructive" });
+        e.target.value = '';
+        return;
+      }
+      if (file.size > 100 * 1024 * 1024) {
+        toast({ title: language === "ar" ? "خطأ" : "Error", description: language === "ar" ? "حجم الملف يجب أن يكون أقل من 100 ميجابايت" : "File size must be less than 100MB", variant: "destructive" });
+        e.target.value = '';
+        return;
+      }
+      setResourceFile(file);
+    }
+  };
+
+  const createResourceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const formData = new FormData();
+      formData.append("titleEn", data.titleEn);
+      formData.append("titleAr", data.titleAr);
+      formData.append("descriptionEn", data.descriptionEn);
+      formData.append("descriptionAr", data.descriptionAr);
+      formData.append("resourceType", data.resourceType);
+      if (data.resourceType === "link") {
+        formData.append("linkUrl", data.linkUrl);
+      } else if (resourceFile) {
+        formData.append("file", resourceFile);
+      }
+      const response = await axios.post(`/api/admin/courses/${selectedResourceCourseId}/resources`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (progressEvent: any) => {
+          setResourceUploadProgress(progressEvent.total ? Math.round((progressEvent.loaded * 100) / progressEvent.total) : 0);
+        },
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/courses/${selectedResourceCourseId}/resources`] });
+      toast({ title: language === "ar" ? "تم الإنشاء" : "Created", description: language === "ar" ? "تم إضافة الموارد بنجاح" : "Resource added successfully" });
+      setResourceFile(null);
+      setResourceLinkUrl("");
+      setResourceTitleEn("");
+      setResourceTitleAr("");
+      setResourceDescEn("");
+      setResourceDescAr("");
+      setResourceUploadProgress(0);
+      refetchResources();
+    },
+    onError: (error: any) => {
+      toast({ title: language === "ar" ? "خطأ" : "Error", description: error.response?.data?.message || "Failed to add resource", variant: "destructive" });
+      setResourceUploadProgress(0);
+    },
+  });
+
+  const deleteResourceMutation = useMutation({
+    mutationFn: async (resourceId: string) => {
+      return await apiRequest("DELETE", `/api/admin/course-resources/${resourceId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/courses/${selectedResourceCourseId}/resources`] });
+      toast({ title: language === "ar" ? "تم الحذف" : "Deleted", description: language === "ar" ? "تم حذف الموارد بنجاح" : "Resource deleted successfully" });
+      refetchResources();
+    },
+  });
 
   const openEditDialog = (course: Course) => {
     setEditingCourse(course);
@@ -1234,6 +1324,14 @@ export default function AdminCourses() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => openResourceDialog(course.id)}
+                    data-testid={`button-resources-${course.id}`}
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => openEditDialog(course)}
                     data-testid={`button-edit-${course.id}`}
                   >
@@ -1269,6 +1367,95 @@ export default function AdminCourses() {
           </Card>
         ))}
       </div>
+
+      {/* Resources Management Dialog */}
+      <Dialog open={resourceDialogOpen} onOpenChange={setResourceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {language === "ar" ? "إدارة الموارد" : "Manage Resources"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Current Resources */}
+          {resources && resources.length > 0 && (
+            <div className="mb-6 pb-6 border-b">
+              <h3 className="text-lg font-semibold mb-4">{language === "ar" ? "الموارد الحالية" : "Current Resources"}</h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {resources.map((resource) => (
+                  <div key={resource.id} className="flex items-center justify-between p-3 bg-muted rounded-lg" data-testid={`card-admin-resource-${resource.id}`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{language === "ar" ? resource.titleAr : resource.titleEn}</p>
+                      <p className="text-xs text-muted-foreground">{resource.fileName}</p>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => deleteResourceMutation.mutate(resource.id)} data-testid={`button-delete-resource-${resource.id}`}>
+                      <X className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add Resource Form */}
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Button variant={resourceType === "file" ? "default" : "outline"} size="sm" onClick={() => setResourceType("file")} data-testid="button-resource-type-file">
+                {language === "ar" ? "ملف" : "File"}
+              </Button>
+              <Button variant={resourceType === "link" ? "default" : "outline"} size="sm" onClick={() => setResourceType("link")} data-testid="button-resource-type-link">
+                {language === "ar" ? "رابط" : "Link"}
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="resource-title-en" className="text-sm">{language === "ar" ? "العنوان (إنجليزي)" : "Title (English)"}</Label>
+                <Input id="resource-title-en" value={resourceTitleEn} onChange={(e) => setResourceTitleEn(e.target.value)} placeholder="Resource title" data-testid="input-resource-title-en" />
+              </div>
+              <div>
+                <Label htmlFor="resource-title-ar" className="text-sm">{language === "ar" ? "العنوان (عربي)" : "Title (Arabic)"}</Label>
+                <Input id="resource-title-ar" value={resourceTitleAr} onChange={(e) => setResourceTitleAr(e.target.value)} placeholder="عنوان الموارد" data-testid="input-resource-title-ar" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="resource-desc-en" className="text-sm">{language === "ar" ? "الوصف (إنجليزي)" : "Description (English)"}</Label>
+                <Textarea value={resourceDescEn} onChange={(e) => setResourceDescEn(e.target.value)} placeholder="Optional description" className="resize-none" rows={2} data-testid="input-resource-desc-en" />
+              </div>
+              <div>
+                <Label htmlFor="resource-desc-ar" className="text-sm">{language === "ar" ? "الوصف (عربي)" : "Description (Arabic)"}</Label>
+                <Textarea value={resourceDescAr} onChange={(e) => setResourceDescAr(e.target.value)} placeholder="وصف اختياري" className="resize-none" rows={2} data-testid="input-resource-desc-ar" />
+              </div>
+            </div>
+
+            {resourceType === "file" ? (
+              <div>
+                <Label htmlFor="resource-file" className="text-sm">{language === "ar" ? "اختر ملف" : "Select File"}</Label>
+                <Input id="resource-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleResourceFileChange} ref={resourceFileInputRef} data-testid="input-resource-file" />
+                {resourceFile && <p className="text-xs text-muted-foreground mt-1">{resourceFile.name}</p>}
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="resource-link-url" className="text-sm">{language === "ar" ? "رابط URL" : "Link URL"}</Label>
+                <Input id="resource-link-url" value={resourceLinkUrl} onChange={(e) => setResourceLinkUrl(e.target.value)} placeholder="https://example.com" data-testid="input-resource-link-url" />
+              </div>
+            )}
+
+            {resourceUploadProgress > 0 && resourceUploadProgress < 100 && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm"><span>{language === "ar" ? "جاري الرفع..." : "Uploading..."}</span><span>{resourceUploadProgress}%</span></div>
+                <Progress value={resourceUploadProgress} className="h-2" />
+              </div>
+            )}
+
+            <Button onClick={() => createResourceMutation.mutate({ titleEn: resourceTitleEn, titleAr: resourceTitleAr, descriptionEn: resourceDescEn, descriptionAr: resourceDescAr, resourceType, linkUrl: resourceLinkUrl })} disabled={createResourceMutation.isPending || !resourceTitleEn || !resourceTitleAr || (resourceType === "file" && !resourceFile) || (resourceType === "link" && !resourceLinkUrl)} className="w-full" data-testid="button-add-resource">
+              {createResourceMutation.isPending ? (language === "ar" ? "جاري الإضافة..." : "Adding...") : (language === "ar" ? "إضافة موارد" : "Add Resource")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Lesson Management Dialog */}
       <Dialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen}>
