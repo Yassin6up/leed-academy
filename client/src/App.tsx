@@ -28,6 +28,7 @@ import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminMeetings from "@/pages/admin/AdminMeetings";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
+import AdminWithdrawals from "@/pages/admin/AdminWithdrawals";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -106,6 +107,13 @@ function Router() {
             {() => (
               <AdminLayout>
                 <AdminSettings />
+              </AdminLayout>
+            )}
+          </Route>
+          <Route path="/admin/withdrawals">
+            {() => (
+              <AdminLayout>
+                <AdminWithdrawals />
               </AdminLayout>
             )}
           </Route>
