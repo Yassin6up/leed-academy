@@ -227,22 +227,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get referral statistics (for current user)
-  app.get("/api/referral/stats", isAuthenticated, async (req, res) => {
-    try {
-      const userId = (req.session as any)?.userId;
-      const user = await storage.getUser(userId);
-      const referralCount = await storage.getReferralCount(userId);
-      res.json({
-        referralCode: user?.referralCode,
-        totalReferrals: referralCount,
-      });
-    } catch (error) {
-      console.error("Error fetching referral stats:", error);
-      res.status(500).json({ message: "Failed to fetch referral stats" });
-    }
-  });
-
   // Serve uploaded files with authentication
   app.use("/uploads", isAuthenticated, express.static(uploadDir));
 
@@ -1441,6 +1425,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const transaction = await storage.addReferralEarnings(referrerId, referredUserId, amount || 10);
       res.json(transaction);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Withdrawal endpoints
+  app.post("/api/withdrawals/request", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      const { amount, walletAddress, chain } = req.body;
+
+      // Validate minimum withdrawal amount
+      if (parseFloat(amount) < 100) {
+        return res.status(400).json({ message: "Minimum withdrawal amount is $100" });
+      }
+
+      // Check user's current earnings
+      const user = await storage.getUser(userId);
+      if (!user || parseFloat(user.referralEarnings || "0") < parseFloat(amount)) {
+        return res.status(400).json({ message: "Insufficient balance" });
+      }
+
+      const withdrawal = await storage.createWithdrawalRequest({
+        userId,
+        amount,
+        walletAddress,
+        chain,
+      });
+
+      res.json(withdrawal);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/withdrawals/user", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      const withdrawals = await storage.getUserWithdrawals(userId);
+      res.json(withdrawals);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/withdrawals/admin", requireAdmin, async (req, res) => {
+    try {
+      const withdrawals = await storage.getAllWithdrawalRequests();
+      
+      // Get user details for each withdrawal
+      const withUserDetails = await Promise.all(
+        withdrawals.map(async (w) => {
+          const user = await storage.getUser(w.userId);
+          return {
+            ...w,
+            userName: `${user?.firstName} ${user?.lastName}`,
+            userEmail: user?.email,
+            referralCode: user?.referralCode,
+          };
+        })
+      );
+
+      res.json(withUserDetails);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/withdrawals/:id/approve", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { adminNotes } = req.body;
+
+      const withdrawal = await storage.approveWithdrawal(id, adminNotes);
+      res.json(withdrawal);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/withdrawals/:id/reject", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { adminNotes } = req.body;
+
+      const withdrawal = await storage.rejectWithdrawal(id, adminNotes);
+      res.json(withdrawal);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

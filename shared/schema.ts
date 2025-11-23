@@ -81,6 +81,29 @@ export const insertReferralTransactionSchema = createInsertSchema(referralTransa
 export type InsertReferralTransaction = z.infer<typeof insertReferralTransactionSchema>;
 export type ReferralTransaction = typeof referralTransactions.$inferSelect;
 
+// Withdrawal Requests table
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  walletAddress: varchar("wallet_address").notNull(),
+  chain: varchar("chain", { length: 50 }).notNull(), // ethereum, polygon, bsc, etc
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected, completed
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  approvedAt: timestamp("approved_at"),
+});
+
+export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalRequests).omit({
+  id: true,
+  createdAt: true,
+  approvedAt: true,
+  status: true,
+  adminNotes: true,
+});
+export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
+
 // Subscription Plans
 export const subscriptionPlans = pgTable("subscription_plans", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

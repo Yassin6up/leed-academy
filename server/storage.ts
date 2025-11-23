@@ -13,6 +13,7 @@ import {
   paymentSettings,
   settings,
   referralTransactions,
+  withdrawalRequests,
   type User,
   type UpsertUser,
   type Course,
@@ -38,6 +39,8 @@ import {
   type Setting,
   type ReferralTransaction,
   type InsertReferralTransaction,
+  type WithdrawalRequest,
+  type InsertWithdrawalRequest,
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -140,6 +143,13 @@ export interface IStorage {
   getSetting(key: string): Promise<Setting | undefined>;
   getAllSettings(): Promise<Setting[]>;
   upsertSetting(key: string, value: string): Promise<Setting>;
+
+  // Withdrawal methods
+  createWithdrawalRequest(data: InsertWithdrawalRequest): Promise<WithdrawalRequest>;
+  getUserWithdrawals(userId: string): Promise<WithdrawalRequest[]>;
+  getAllWithdrawalRequests(): Promise<WithdrawalRequest[]>;
+  approveWithdrawal(withdrawalId: string, adminNotes?: string): Promise<WithdrawalRequest>;
+  rejectWithdrawal(withdrawalId: string, adminNotes?: string): Promise<WithdrawalRequest>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -819,6 +829,76 @@ export class DatabaseStorage implements IStorage {
     
     const [newSetting] = await db.insert(settings).values({ key, value }).returning();
     return newSetting;
+  }
+
+  // Withdrawal methods
+  async createWithdrawalRequest(data: InsertWithdrawalRequest): Promise<WithdrawalRequest> {
+    const [withdrawal] = await db.insert(withdrawalRequests).values(data).returning();
+    return withdrawal;
+  }
+
+  async getUserWithdrawals(userId: string): Promise<WithdrawalRequest[]> {
+    return await db
+      .select()
+      .from(withdrawalRequests)
+      .where(eq(withdrawalRequests.userId, userId))
+      .orderBy(desc(withdrawalRequests.createdAt));
+  }
+
+  async getAllWithdrawalRequests(): Promise<WithdrawalRequest[]> {
+    const results = await db
+      .select()
+      .from(withdrawalRequests)
+      .orderBy(desc(withdrawalRequests.createdAt));
+    return results;
+  }
+
+  async approveWithdrawal(withdrawalId: string, adminNotes?: string): Promise<WithdrawalRequest> {
+    // Get the withdrawal request
+    const [withdrawal] = await db
+      .select()
+      .from(withdrawalRequests)
+      .where(eq(withdrawalRequests.id, withdrawalId))
+      .limit(1);
+
+    if (!withdrawal) {
+      throw new Error("Withdrawal request not found");
+    }
+
+    // Reset user's referral earnings to 0
+    await db
+      .update(users)
+      .set({ 
+        referralEarnings: "0",
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, withdrawal.userId));
+
+    // Update withdrawal status to completed
+    const [updated] = await db
+      .update(withdrawalRequests)
+      .set({
+        status: "completed",
+        approvedAt: new Date(),
+        adminNotes,
+      })
+      .where(eq(withdrawalRequests.id, withdrawalId))
+      .returning();
+
+    return updated;
+  }
+
+  async rejectWithdrawal(withdrawalId: string, adminNotes?: string): Promise<WithdrawalRequest> {
+    const [updated] = await db
+      .update(withdrawalRequests)
+      .set({
+        status: "rejected",
+        adminNotes,
+      })
+      .where(eq(withdrawalRequests.id, withdrawalId))
+      .returning();
+
+    return updated;
   }
 }
 
