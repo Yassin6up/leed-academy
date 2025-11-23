@@ -44,8 +44,8 @@ export default function AdminPayments() {
   });
 
   const filteredPayments = payments?.filter((payment) => {
-    const matchStatus = !statusFilter || payment.status === statusFilter;
-    const matchMethod = !methodFilter || payment.method === methodFilter;
+    const matchStatus = statusFilter === "all" || !statusFilter || payment.status === statusFilter;
+    const matchMethod = methodFilter === "all" || !methodFilter || payment.method === methodFilter;
     const searchLower = searchFilter.toLowerCase();
     const matchSearch =
       !searchFilter ||
@@ -110,33 +110,33 @@ export default function AdminPayments() {
               onChange={(e) => setSearchFilter(e.target.value)}
               data-testid="input-search-payments"
             />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter || "all"} onValueChange={setStatusFilter}>
               <SelectTrigger data-testid="select-status-filter">
                 <SelectValue placeholder={language === "ar" ? "كل الحالات" : "All Status"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{language === "ar" ? "كل الحالات" : "All Status"}</SelectItem>
+                <SelectItem value="all">{language === "ar" ? "كل الحالات" : "All Status"}</SelectItem>
                 <SelectItem value="pending">{language === "ar" ? "قيد الانتظار" : "Pending"}</SelectItem>
                 <SelectItem value="approved">{language === "ar" ? "موافق عليه" : "Approved"}</SelectItem>
                 <SelectItem value="rejected">{language === "ar" ? "مرفوض" : "Rejected"}</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={methodFilter} onValueChange={setMethodFilter}>
+            <Select value={methodFilter || "all"} onValueChange={setMethodFilter}>
               <SelectTrigger data-testid="select-method-filter">
                 <SelectValue placeholder={language === "ar" ? "كل الطرق" : "All Methods"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{language === "ar" ? "كل الطرق" : "All Methods"}</SelectItem>
+                <SelectItem value="all">{language === "ar" ? "كل الطرق" : "All Methods"}</SelectItem>
                 <SelectItem value="bank_transfer">{language === "ar" ? "تحويل بنكي" : "Bank Transfer"}</SelectItem>
                 <SelectItem value="crypto">{language === "ar" ? "عملات رقمية" : "Crypto"}</SelectItem>
               </SelectContent>
             </Select>
-            {(statusFilter || methodFilter || searchFilter) && (
+            {((statusFilter && statusFilter !== "all") || (methodFilter && methodFilter !== "all") || searchFilter) && (
               <Button
                 variant="outline"
                 onClick={() => {
-                  setStatusFilter("");
-                  setMethodFilter("");
+                  setStatusFilter("all");
+                  setMethodFilter("all");
                   setSearchFilter("");
                 }}
                 data-testid="button-clear-filters"
