@@ -371,11 +371,11 @@ export default function AdminAnalytics() {
                   data-testid={`top-course-${index}`}
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-sm">{course.title}</p>
+                    <p className="font-medium text-sm">{course.title || "N/A"}</p>
                     <p className="text-xs text-muted-foreground">
-                      {course.enrollments}{" "}
+                      {course.enrollments || 0}{" "}
                       {language === "ar" ? "تسجيلات" : "enrollments"} •{" "}
-                      {course.completionRate.toFixed(1)}%{" "}
+                      {(course.completionRate ?? 0).toFixed(1)}%{" "}
                       {language === "ar" ? "إكمال" : "completion"}
                     </p>
                   </div>
