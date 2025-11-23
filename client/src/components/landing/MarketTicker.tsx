@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 declare global {
   interface Window {
@@ -7,105 +7,69 @@ declare global {
 }
 
 export function MarketTicker() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scriptRef = useRef<HTMLScriptElement | null>(null);
+
   useEffect(() => {
-    // Clear any existing widget
-    const container = document.getElementById("tradingview-ticker");
-    if (container) {
-      container.innerHTML = "";
-    }
+    if (!containerRef.current) return;
+
+    // Clear any existing content
+    containerRef.current.innerHTML = `
+      <div class="tradingview-widget-container" style="height: 44px;">
+        <div class="tradingview-widget-container__widget" style="height: calc(100% - 32px);"></div>
+        <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Track all markets on TradingView</span></a></div>
+      </div>
+    `;
 
     // Load TradingView script
-    const script = document.createElement("script");
-    script.type = "text/javascript";
-    script.async = true;
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
+    if (!scriptRef.current) {
+      scriptRef.current = document.createElement("script");
+      scriptRef.current.src =
+        "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
+      scriptRef.current.async = true;
 
-    script.onload = () => {
-      if (window.TradingView && window.TradingView.widget) {
-        try {
-          new window.TradingView.widget({
-            symbols: [
-              {
-                proName: "CRYPTOCAP:BTC",
-                title: "Bitcoin",
-              },
-              {
-                proName: "CRYPTOCAP:ETH",
-                title: "Ethereum",
-              },
-              {
-                proName: "BINANCE:BNBUSDT",
-                title: "BNB",
-              },
-              {
-                proName: "NASDAQ:AAPL",
-                title: "Apple",
-              },
-              {
-                proName: "NASDAQ:GOOGL",
-                title: "Google",
-              },
-              {
-                proName: "NASDAQ:MSFT",
-                title: "Microsoft",
-              },
-              {
-                proName: "TVC:GOLD",
-                title: "Gold",
-              },
-              {
-                proName: "FX_IDC:EURUSD",
-                title: "EUR/USD",
-              },
-              {
-                proName: "FX_IDC:GBPUSD",
-                title: "GBP/USD",
-              },
-              {
-                proName: "FX_IDC:USDJPY",
-                title: "USD/JPY",
-              },
-            ],
-            showSymbolLogo: true,
-            isTransparent: true,
-            displayMode: "compact",
-            locale: "en",
-            largeChartUrl: "",
-            container_id: "tradingview-ticker-widget",
-          });
-        } catch (error) {
-          console.error("Error initializing TradingView widget:", error);
+      scriptRef.current.onload = () => {
+        if (window.TradingView && window.TradingView.widget) {
+          try {
+            new window.TradingView.widget({
+              symbols: [
+                { proName: "CRYPTOCAP:BTC", title: "Bitcoin" },
+                { proName: "CRYPTOCAP:ETH", title: "Ethereum" },
+                { proName: "BINANCE:BNBUSDT", title: "BNB" },
+                { proName: "NASDAQ:AAPL", title: "Apple" },
+                { proName: "NASDAQ:GOOGL", title: "Google" },
+                { proName: "NASDAQ:MSFT", title: "Microsoft" },
+                { proName: "TVC:GOLD", title: "Gold" },
+                { proName: "FX_IDC:EURUSD", title: "EUR/USD" },
+                { proName: "FX_IDC:GBPUSD", title: "GBP/USD" },
+                { proName: "FX_IDC:USDJPY", title: "USD/JPY" },
+              ],
+              showSymbolLogo: true,
+              isTransparent: true,
+              displayMode: "compact",
+              locale: "en",
+              largeChartUrl: "",
+            });
+          } catch (error) {
+            console.error("TradingView widget error:", error);
+          }
         }
-      }
-    };
+      };
 
-    const tickerContainer = document.getElementById("tradingview-ticker");
-    if (tickerContainer) {
-      tickerContainer.appendChild(script);
+      containerRef.current.appendChild(scriptRef.current);
     }
 
     return () => {
-      const container = document.getElementById("tradingview-ticker");
-      if (container && script.parentNode === container) {
-        container.removeChild(script);
+      if (scriptRef.current && containerRef.current && scriptRef.current.parentNode === containerRef.current) {
+        containerRef.current.removeChild(scriptRef.current);
+        scriptRef.current = null;
       }
     };
   }, []);
 
   return (
-    <div className="bg-muted/40 border-y border-border py-1.5">
-      <div className="container mx-auto px-6">
-        <div
-          id="tradingview-ticker"
-          className="w-full"
-          style={{ height: "44px" }}
-        >
-          <div
-            id="tradingview-ticker-widget"
-            style={{ height: "44px", overflow: "hidden" }}
-          ></div>
-        </div>
-      </div>
+    <div className="w-full bg-muted/40 border-y border-border py-0">
+      <div className="w-full px-0" ref={containerRef} style={{ minHeight: "44px" }} />
     </div>
   );
 }
