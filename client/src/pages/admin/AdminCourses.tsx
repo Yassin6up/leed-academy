@@ -1167,8 +1167,46 @@ export default function AdminCourses() {
         </DialogContent>
       </Dialog>
 
+      {/* Courses Filter Section */}
+      <div className="mb-8 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Input
+            placeholder={language === "ar" ? "ابحث عن دورة..." : "Search courses..."}
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            data-testid="input-search-courses"
+          />
+          <select 
+            value={levelFilter}
+            onChange={(e) => setLevelFilter(e.target.value)}
+            className="px-3 py-2 border border-border rounded-md bg-background"
+            data-testid="select-level-filter"
+          >
+            <option value="all">{language === "ar" ? "جميع المستويات" : "All Levels"}</option>
+            <option value="1">{language === "ar" ? "المستوى 1" : "Level 1"}</option>
+            <option value="2">{language === "ar" ? "المستوى 2" : "Level 2"}</option>
+            <option value="3">{language === "ar" ? "المستوى 3" : "Level 3"}</option>
+          </select>
+          {(searchFilter || levelFilter !== "all") && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchFilter("");
+                setLevelFilter("all");
+              }}
+              data-testid="button-clear-course-filters"
+            >
+              {language === "ar" ? "مسح" : "Clear"}
+            </Button>
+          )}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {language === "ar" ? "النتائج: " : "Results: "} {filteredCourses.length}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {courses?.map((course) => (
+        {filteredCourses?.map((course) => (
           <Card
             key={course.id}
             className="hover-elevate active-elevate-2 transition-all"
