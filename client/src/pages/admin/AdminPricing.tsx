@@ -196,9 +196,9 @@ export default function AdminPricing() {
         <h1 className="text-3xl font-heading font-bold text-foreground" data-testid="text-admin-pricing-title">
           {language === "ar" ? "إدارة خطط الاشتراك" : "Manage Subscription Plans"}
         </h1>
-        <Dialog open={dialogOpen} onOpenChange={closeDialog}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) resetForm(); setDialogOpen(open); }}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-plan" onClick={() => resetForm()}>
+            <Button data-testid="button-create-plan" onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               {language === "ar" ? "إنشاء خطة" : "Create Plan"}
             </Button>
