@@ -1051,23 +1051,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             videoUrl: `/uploads/courses/${validated.courseId}/videos/${lessonId}/${path.basename(finalPath)}`,
             videoFilePath: finalPath,
           });
-
-          // Pre-convert to HLS for faster playback (non-blocking)
-          setImmediate(async () => {
-            try {
-              const encryptionKey = HLSConverter.generateEncryptionKey();
-              const hlsDir = path.join(process.cwd(), "uploads", "hls", lessonId);
-              await HLSConverter.convertToHLS({
-                videoPath: finalPath,
-                outputDir: hlsDir,
-                segmentDuration: 4,
-                encryptionKey,
-              });
-              console.log(`Pre-converted video to HLS: ${lessonId}`);
-            } catch (error: any) {
-              console.error(`Failed to pre-convert video ${lessonId}:`, error.message);
-            }
-          });
         }
 
         res.json(lesson);
@@ -1552,10 +1535,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // HLS Video streaming with encryption
-  const hlsCache = new Map<string, { key: string; expiry: number }>();
-
-  app.get("/api/videos/:lessonId/playlist.m3u8", isAuthenticated, async (req, res) => {
+  // Secure video streaming endpoint with authentication
+  app.get("/api/videos/:lessonId/stream", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.session as any)?.userId;
       const { lessonId } = req.params;
@@ -1564,6 +1545,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lesson = await storage.getLesson(lessonId);
       if (!lesson) {
         return res.status(404).json({ message: "Lesson not found" });
+      }
+
+      // Get course to verify access
+      const course = await storage.getCourse(lesson.courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
       }
 
       // Check user subscription/access
@@ -1576,134 +1563,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "No access to this course" });
       }
 
+      // Handle external URL
       if (lesson.videoUrl) {
-        // External URL - return directly
         return res.json({ url: lesson.videoUrl });
       }
 
-      if (!lesson.videoFilePath || !fs.existsSync(lesson.videoFilePath)) {
+      // Serve local video file
+      if (lesson.videoFilePath && fs.existsSync(lesson.videoFilePath)) {
+        // Security headers to prevent unauthorized access and downloading
+        res.setHeader("Content-Type", "video/mp4");
+        res.setHeader("Content-Security-Policy", "default-src 'self'; media-src 'self'");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, private");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("X-Frame-Options", "DENY");
+        res.setHeader("Content-Disposition", "inline; filename=video.mp4");
+        
+        // Stream the video file
+        res.sendFile(lesson.videoFilePath);
+      } else {
         return res.status(404).json({ message: "Video not found" });
       }
-
-      // Get or generate encryption key for this lesson
-      let encryptionKey = hlsCache.get(lessonId)?.key;
-      if (!encryptionKey) {
-        encryptionKey = HLSConverter.generateEncryptionKey();
-        hlsCache.set(lessonId, { key: encryptionKey, expiry: Date.now() + 24 * 60 * 60 * 1000 });
-      }
-
-      // HLS output directory
-      const hlsDir = path.join(process.cwd(), "uploads", "hls", lessonId);
-
-      // Convert to HLS if not already done
-      if (!HLSConverter.hasSegments(hlsDir)) {
-        await HLSConverter.convertToHLS({
-          videoPath: lesson.videoFilePath,
-          outputDir: hlsDir,
-          segmentDuration: 6,
-          encryptionKey,
-        });
-      }
-
-      // Get manifest and inject key endpoint
-      const manifestPath = path.join(hlsDir, "playlist.m3u8");
-      let manifest = fs.readFileSync(manifestPath, "utf-8");
-
-      // Replace key URI with our secure endpoint
-      manifest = manifest.replace(
-        /#EXT-X-KEY:METHOD=AES-128,URI="[^"]*"/,
-        `#EXT-X-KEY:METHOD=AES-128,URI="/api/videos/${lessonId}/key"`
-      );
-
-      res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      res.send(manifest);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // HLS encryption key endpoint (secure, requires auth)
-  app.get("/api/videos/:lessonId/key", isAuthenticated, async (req, res) => {
-    try {
-      const userId = (req.session as any)?.userId;
-      const { lessonId } = req.params;
-
-      // Get lesson details
-      const lesson = await storage.getLesson(lessonId);
-      if (!lesson) {
-        return res.status(404).json({ message: "Lesson not found" });
-      }
-
-      // Check user subscription/access
-      const user = await storage.getUser(userId);
-      const userSub = await storage.getUserSubscription(userId);
-
-      // Allow access if user has active subscription or is admin
-      const hasAccess = user?.role === "admin" || userSub?.status === "active";
-      if (!hasAccess) {
-        return res.status(403).json({ message: "No access to this course" });
-      }
-
-      // Get cached encryption key
-      const keyData = hlsCache.get(lessonId);
-      if (!keyData) {
-        return res.status(404).json({ message: "Key not found" });
-      }
-
-      // Check if key has expired
-      if (Date.now() > keyData.expiry) {
-        hlsCache.delete(lessonId);
-        return res.status(401).json({ message: "Key expired" });
-      }
-
-      // Return encryption key as binary
-      res.setHeader("Content-Type", "application/octet-stream");
-      res.setHeader("Content-Length", 16);
-      res.send(Buffer.from(keyData.key, "hex"));
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // HLS segment endpoint
-  app.get("/api/videos/:lessonId/segment/:segmentName", isAuthenticated, async (req, res) => {
-    try {
-      const userId = (req.session as any)?.userId;
-      const { lessonId, segmentName } = req.params;
-
-      // Get lesson details
-      const lesson = await storage.getLesson(lessonId);
-      if (!lesson) {
-        return res.status(404).json({ message: "Lesson not found" });
-      }
-
-      // Check user subscription/access
-      const user = await storage.getUser(userId);
-      const userSub = await storage.getUserSubscription(userId);
-
-      // Allow access if user has active subscription or is admin
-      const hasAccess = user?.role === "admin" || userSub?.status === "active";
-      if (!hasAccess) {
-        return res.status(403).json({ message: "No access to this course" });
-      }
-
-      // Serve segment file with security
-      const segmentPath = path.join(process.cwd(), "uploads", "hls", lessonId, segmentName);
-
-      // Validate segment path (prevent directory traversal)
-      if (!segmentPath.startsWith(path.join(process.cwd(), "uploads", "hls", lessonId))) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      if (!fs.existsSync(segmentPath)) {
-        return res.status(404).json({ message: "Segment not found" });
-      }
-
-      res.setHeader("Content-Type", "video/mp2t");
-      res.setHeader("Cache-Control", "public, max-age=3600");
-      res.sendFile(segmentPath);
-    } catch (error: any) {
+      console.error("Video streaming error:", error);
       res.status(500).json({ message: error.message });
     }
   });

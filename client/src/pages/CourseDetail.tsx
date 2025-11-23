@@ -24,7 +24,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useRef, useEffect } from "react";
-import HLS from "hls.js";
 
 export default function CourseDetail() {
   const [, params] = useRoute("/course/:id");
@@ -35,7 +34,7 @@ export default function CourseDetail() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [lastProgressUpdate, setLastProgressUpdate] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const hlsRef = useRef<HLS | null>(null);
+  const [videoSrc, setVideoSrc] = useState<string>("");
 
   const { data: course } = useQuery<Course>({
     queryKey: ["/api/courses", params?.id],
@@ -47,68 +46,14 @@ export default function CourseDetail() {
     enabled: !!params?.id,
   });
 
-  // Initialize HLS player when lesson changes
+  // Update video source when lesson changes
   useEffect(() => {
-    if (!lessons || lessons.length === 0 || !videoRef.current) return;
-
+    if (!lessons || lessons.length === 0) return;
     const lesson = lessons[currentLessonIndex];
-    if (!lesson) return;
-
-    const video = videoRef.current;
-    const playlistUrl = `/api/videos/${lesson.id}/playlist.m3u8`;
-
-    // Cleanup previous HLS instance
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
+    if (lesson) {
+      setVideoSrc(`/api/videos/${lesson.id}/stream`);
     }
-
-    // Check if browser supports HLS natively
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = playlistUrl;
-    } else if (HLS.isSupported()) {
-      // Use hls.js for other browsers
-      const hls = new HLS({
-        debug: false,
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 30,
-      });
-
-      hlsRef.current = hls;
-
-      hls.loadSource(playlistUrl);
-      hls.attachMedia(video);
-
-      hls.on(HLS.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => {});
-      });
-
-      hls.on(HLS.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          console.error("Fatal HLS error:", data);
-          toast({
-            title: language === "ar" ? "خطأ في تشغيل الفيديو" : "Video playback error",
-            description: data.response?.error || "Failed to load video",
-            variant: "destructive",
-          });
-        }
-      });
-    } else {
-      toast({
-        title: language === "ar" ? "المتصفح غير مدعوم" : "Unsupported browser",
-        description: language === "ar" ? "متصفحك لا يدعم تشغيل HLS" : "Your browser does not support HLS playback",
-        variant: "destructive",
-      });
-    }
-
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
-  }, [currentLessonIndex, lessons, language, toast]);
+  }, [currentLessonIndex, lessons]);
 
   // Prevent video download and right-click
   const handleVideoContextMenu = (e: React.MouseEvent) => {
@@ -359,6 +304,7 @@ export default function CourseDetail() {
               ref={videoRef}
               className="w-full aspect-video pointer-events-auto"
               controls
+              src={videoSrc}
               data-testid="video-player"
               controlsList="nodownload"
               onContextMenu={handleVideoContextMenu}
