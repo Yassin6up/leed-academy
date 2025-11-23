@@ -42,7 +42,7 @@ export default function AdminDashboard() {
   const [revenuePeriod, setRevenuePeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
 
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || user?.role !== "admin")) {
+    if (!isLoading && (!isAuthenticated || (user?.role !== "admin" && user?.role !== "manager" && user?.role !== "support"))) {
       toast({
         title: "Unauthorized",
         description: "You don't have permission to access this page",
@@ -56,15 +56,15 @@ export default function AdminDashboard() {
 
   const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/stats"],
-    enabled: isAuthenticated && user?.role === "admin",
+    enabled: isAuthenticated && (user?.role === "admin" || user?.role === "manager" || user?.role === "support"),
   });
 
   const { data: analytics, isLoading: analyticsLoading, isError: analyticsError } = useQuery<Analytics>({
     queryKey: ["/api/admin/analytics"],
-    enabled: isAuthenticated && user?.role === "admin",
+    enabled: isAuthenticated && (user?.role === "admin" || user?.role === "manager" || user?.role === "support"),
   });
 
-  if (isLoading || !isAuthenticated || user?.role !== "admin") {
+  if (isLoading || !isAuthenticated || (user?.role !== "admin" && user?.role !== "manager" && user?.role !== "support")) {
     return (
       <div className="p-8">
         <div className="h-96 bg-muted animate-pulse rounded-lg" />
