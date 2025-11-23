@@ -36,34 +36,14 @@ export default function CourseDetail() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [videoSrc, setVideoSrc] = useState<string>("");
 
-  // Fetch secure video URL
-  const getSecureVideoUrl = async (lessonId: string) => {
-    try {
-      const response = await fetch(`/api/videos/${lessonId}/stream`);
-      if (!response.ok) return "";
-      
-      // For streaming, use the secure endpoint directly
-      return `/api/videos/${lessonId}/stream`;
-    } catch (error) {
-      console.error("Error fetching video:", error);
-      return "";
-    }
-  };
-
   // Update video source when lesson changes
-  const { data: currentLesson } = useQuery({
-    queryKey: ["/api/courses", params?.id, "lessons", currentLessonIndex],
-    enabled: !!params?.id && !!lessons && lessons.length > 0,
-    queryFn: async () => {
-      if (!lessons || !lessons[currentLessonIndex]) return null;
-      const lesson = lessons[currentLessonIndex];
-      
-      // Get secure video URL
-      const url = await getSecureVideoUrl(lesson.id);
-      setVideoSrc(url);
-      return lesson;
-    },
-  });
+  useEffect(() => {
+    if (!lessons || lessons.length === 0) return;
+    const lesson = lessons[currentLessonIndex];
+    if (lesson) {
+      setVideoSrc(`/api/videos/${lesson.id}/stream`);
+    }
+  }, [currentLessonIndex, lessons]);
 
   // Prevent video download and right-click
   const handleVideoContextMenu = (e: React.MouseEvent) => {
