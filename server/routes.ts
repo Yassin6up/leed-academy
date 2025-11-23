@@ -770,6 +770,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(users);
   });
 
+  // Create user by admin
+  app.post("/api/admin/users/create", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { firstName, lastName, email, password, phone, role } = req.body;
+      const adminId = (req.session as any)?.userId;
+
+      // Validate required fields
+      if (!firstName || !lastName || !email || !password) {
+        return res.status(400).json({ message: "First name, last name, email, and password are required" });
+      }
+
+      // Validate role
+      if (role && !["user", "support", "manager", "admin"].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists with this email" });
+      }
+
+      // Create user with specified role
+      const user = await storage.createUser({
+        email,
+        password,
+        firstName,
+        lastName,
+        phone: phone || "",
+        role: role || "user",
+      });
+
+      // Log admin action
+      await logAdminAction(adminId, "create-user", "users", `Created new user ${user.firstName} ${user.lastName} with role: ${role || 'user'}`, {
+        userId: user.id,
+        email: user.email,
+        role: role || "user",
+      });
+
+      res.json({
+        message: "User created successfully",
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: error.message || "Failed to create user" });
+    }
+  });
+
   app.patch("/api/admin/users/:id/deactivate", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
