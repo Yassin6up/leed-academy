@@ -143,6 +143,8 @@ export function AdminSidebar() {
     }
     if (user?.role === "support") {
       return businessItems.filter(item => 
+        item.path === "/admin/pricing" || 
+        item.path === "/admin/users" || 
         item.path === "/admin/payments" || 
         item.path === "/admin/withdrawals"
       );

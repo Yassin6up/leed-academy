@@ -370,7 +370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin pricing routes
-  app.post("/api/admin/subscription-plans", isAuthenticated, requireAdmin, async (req, res) => {
+  app.post("/api/admin/subscription-plans", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { nameEn, nameAr, descriptionEn, descriptionAr, price, durationDays, featuresEn, featuresAr, isPopular } = req.body;
       const plan = await storage.createSubscriptionPlan({
@@ -387,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/subscription-plans/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/subscription-plans/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { nameEn, nameAr, descriptionEn, descriptionAr, price, durationDays, featuresEn, featuresAr, isPopular } = req.body;
       const plan = await storage.updateSubscriptionPlan(req.params.id, {
@@ -404,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/subscription-plans/:id", isAuthenticated, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/subscription-plans/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       await storage.deleteSubscriptionPlan(req.params.id);
       res.json({ message: "Plan deleted successfully" });
