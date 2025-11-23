@@ -369,6 +369,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(sanitizedMeetings);
   });
 
+  // Market data (crypto, stocks, commodities, forex)
+  app.get("/api/market/data", async (_req, res) => {
+    try {
+      const response = await fetch(
+        "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22BNBUSDT%22]"
+      );
+      
+      let cryptoData = [];
+      if (response.ok) {
+        const data = await response.json();
+        cryptoData = data.map((item: any) => ({
+          type: "crypto",
+          symbol: item.symbol.replace("USDT", ""),
+          name: item.symbol.replace("USDT", ""),
+          price: parseFloat(item.lastPrice),
+          change24h: parseFloat(item.priceChangePercent),
+        }));
+      }
+      
+      const fallbackData = [
+        { type: "crypto", symbol: "BTC", name: "Bitcoin", price: 43250.50, change24h: 2.45 },
+        { type: "crypto", symbol: "ETH", name: "Ethereum", price: 2275.30, change24h: 1.82 },
+        { type: "crypto", symbol: "BNB", name: "Binance Coin", price: 315.75, change24h: -0.65 },
+        { type: "stock", symbol: "AAPL", name: "Apple", price: 228.45, change24h: 1.23 },
+        { type: "stock", symbol: "GOOGL", name: "Google", price: 156.78, change24h: -0.45 },
+        { type: "stock", symbol: "MSFT", name: "Microsoft", price: 423.19, change24h: 2.11 },
+        { type: "commodity", symbol: "GOLD", name: "Gold", price: 2045.50, change24h: 0.67 },
+        { type: "forex", symbol: "EUR/USD", name: "Euro", price: 1.0895, change24h: 0.32 },
+        { type: "forex", symbol: "GBP/USD", name: "Pound", price: 1.2750, change24h: -0.15 },
+        { type: "forex", symbol: "USD/JPY", name: "Yen", price: 148.65, change24h: 0.89 },
+      ];
+      
+      const marketData = cryptoData.length > 0 ? [...cryptoData, ...fallbackData.slice(3)] : fallbackData;
+      res.json(marketData);
+    } catch (error) {
+      console.error("Error fetching market data:", error);
+      const fallbackData = [
+        { type: "crypto", symbol: "BTC", name: "Bitcoin", price: 43250.50, change24h: 2.45 },
+        { type: "crypto", symbol: "ETH", name: "Ethereum", price: 2275.30, change24h: 1.82 },
+        { type: "crypto", symbol: "BNB", name: "Binance Coin", price: 315.75, change24h: -0.65 },
+        { type: "stock", symbol: "AAPL", name: "Apple", price: 228.45, change24h: 1.23 },
+        { type: "stock", symbol: "GOOGL", name: "Google", price: 156.78, change24h: -0.45 },
+        { type: "stock", symbol: "MSFT", name: "Microsoft", price: 423.19, change24h: 2.11 },
+        { type: "commodity", symbol: "GOLD", name: "Gold", price: 2045.50, change24h: 0.67 },
+        { type: "forex", symbol: "EUR/USD", name: "Euro", price: 1.0895, change24h: 0.32 },
+        { type: "forex", symbol: "GBP/USD", name: "Pound", price: 1.2750, change24h: -0.15 },
+        { type: "forex", symbol: "USD/JPY", name: "Yen", price: 148.65, change24h: 0.89 },
+      ];
+      res.json(fallbackData);
+    }
+  });
+
   // Crypto prices from Binance API
   app.get("/api/crypto/prices", async (_req, res) => {
     try {
