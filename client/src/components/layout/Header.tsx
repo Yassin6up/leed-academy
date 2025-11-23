@@ -23,6 +23,9 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toast } = useToast();
 
+  // Check if user has admin panel access (admin, manager, or support)
+  const hasAdminAccess = user?.role === "admin" || user?.role === "manager" || user?.role === "support";
+
   const handleLogout = async () => {
     try {
       const response = await fetch("/api/auth/logout", {
@@ -160,7 +163,7 @@ export function Header() {
                       {t("nav.dashboard")}
                     </Link>
                   </DropdownMenuItem>
-                  {isAdmin && (
+                  {hasAdminAccess && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin" data-testid="link-admin">
                         {t("nav.admin")}
