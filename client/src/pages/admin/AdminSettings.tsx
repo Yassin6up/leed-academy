@@ -53,30 +53,31 @@ type SocialLinksForm = z.infer<typeof socialLinksSchema>;
 
 export default function AdminSettings() {
   const { language } = useLanguage();
-  const { isAdmin, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
 
+  // Redirect if not admin
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || !isAdmin)) {
+    if (!isLoading && (!isAuthenticated || user?.role !== "admin")) {
       toast({
         title: "Unauthorized",
-        description: "You don't have permission to access this page",
+        description: "Only admins can access this page",
         variant: "destructive",
       });
       setTimeout(() => {
         window.location.href = "/";
       }, 500);
     }
-  }, [isAuthenticated, isAdmin, isLoading, toast]);
+  }, [isAuthenticated, user?.role, isLoading, toast]);
 
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ["/api/payment-settings"],
-    enabled: isAuthenticated && isAdmin,
+    enabled: isAuthenticated && user?.role === "admin",
   });
 
   const { data: platformSettings, isLoading: platformSettingsLoading } = useQuery<Array<{ key: string; value: string }>>({
     queryKey: ["/api/settings"],
-    enabled: isAuthenticated && isAdmin,
+    enabled: isAuthenticated && user?.role === "admin",
   });
 
   const form = useForm<PaymentSettingsForm>({

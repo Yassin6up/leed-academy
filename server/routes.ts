@@ -829,14 +829,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const currentUserId = (req.session as any)?.userId;
+      const currentUser = await storage.getUser(currentUserId);
+      const targetUser = await storage.getUser(id);
+      
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
       
       if (currentUserId === id) {
         return res.status(400).json({ message: "You cannot deactivate your own account" });
       }
       
+      // Role hierarchy check
+      if (currentUser?.role === "support") {
+        // Support can only deactivate regular users
+        if (targetUser.role !== "user") {
+          return res.status(403).json({ message: "Support can only deactivate user accounts" });
+        }
+      } else if (currentUser?.role === "manager") {
+        // Manager can deactivate support and users, but not admin or other managers
+        if (targetUser.role === "admin" || targetUser.role === "manager") {
+          return res.status(403).json({ message: "Manager cannot deactivate admin or manager accounts" });
+        }
+      }
+      // Admin can deactivate anyone
+      
       const user = await storage.deactivateUser(id);
-      const userId = (req.session as any)?.userId;
-      await logAdminAction(userId, "deactivate", "users", `Deactivated user account ${id}`);
+      await logAdminAction(currentUserId, "deactivate", "users", `Deactivated user account ${id} (${targetUser.role})`);
       res.json(user);
     } catch (error: any) {
       console.error("Error deactivating user:", error);
@@ -848,13 +867,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userId = (req.session as any)?.userId;
+      const currentUser = await storage.getUser(userId);
+      const targetUser = await storage.getUser(id);
+      
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
       
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
+      // Role hierarchy check
+      if (currentUser?.role === "support") {
+        // Support can only activate regular users
+        if (targetUser.role !== "user") {
+          return res.status(403).json({ message: "Support can only activate user accounts" });
+        }
+      } else if (currentUser?.role === "manager") {
+        // Manager can activate support and users, but not admin or other managers
+        if (targetUser.role === "admin" || targetUser.role === "manager") {
+          return res.status(403).json({ message: "Manager cannot activate admin or manager accounts" });
+        }
+      }
+      // Admin can activate anyone
+      
       const user = await storage.activateUser(id);
-      await logAdminAction(userId, "activate", "users", `Activated user account ${id}`);
+      await logAdminAction(userId, "activate", "users", `Activated user account ${id} (${targetUser.role})`);
       res.json(user);
     } catch (error: any) {
       console.error("Error activating user:", error);
@@ -866,13 +905,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const currentUserId = (req.session as any)?.userId;
+      const currentUser = await storage.getUser(currentUserId);
+      const targetUser = await storage.getUser(id);
+      
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
       
       if (currentUserId === id) {
         return res.status(400).json({ message: "You cannot delete your own account" });
       }
       
+      // Role hierarchy check
+      if (currentUser?.role === "support") {
+        // Support can only delete regular users
+        if (targetUser.role !== "user") {
+          return res.status(403).json({ message: "Support can only delete user accounts" });
+        }
+      } else if (currentUser?.role === "manager") {
+        // Manager can delete support and users, but not admin or other managers
+        if (targetUser.role === "admin" || targetUser.role === "manager") {
+          return res.status(403).json({ message: "Manager cannot delete admin or manager accounts" });
+        }
+      }
+      // Admin can delete anyone
+      
       await storage.deleteUser(id);
-      await logAdminAction(currentUserId, "delete", "users", `Deleted user account ${id}`);
+      await logAdminAction(currentUserId, "delete", "users", `Deleted user account ${id} (${targetUser.role})`);
       res.json({ message: "User deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting user:", error);
