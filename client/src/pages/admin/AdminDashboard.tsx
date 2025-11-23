@@ -37,12 +37,12 @@ interface Analytics {
 
 export default function AdminDashboard() {
   const { language } = useLanguage();
-  const { isAdmin, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const [revenuePeriod, setRevenuePeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
 
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || !isAdmin)) {
+    if (!isLoading && (!isAuthenticated || user?.role !== "admin")) {
       toast({
         title: "Unauthorized",
         description: "You don't have permission to access this page",
@@ -52,19 +52,19 @@ export default function AdminDashboard() {
         window.location.href = "/";
       }, 500);
     }
-  }, [isAuthenticated, isAdmin, isLoading, toast]);
+  }, [isAuthenticated, user?.role, isLoading, toast]);
 
   const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/stats"],
-    enabled: isAuthenticated && isAdmin,
+    enabled: isAuthenticated && user?.role === "admin",
   });
 
   const { data: analytics, isLoading: analyticsLoading, isError: analyticsError } = useQuery<Analytics>({
     queryKey: ["/api/admin/analytics"],
-    enabled: isAuthenticated && isAdmin,
+    enabled: isAuthenticated && user?.role === "admin",
   });
 
-  if (isLoading || !isAuthenticated || !isAdmin) {
+  if (isLoading || !isAuthenticated || user?.role !== "admin") {
     return (
       <div className="p-8">
         <div className="h-96 bg-muted animate-pulse rounded-lg" />
