@@ -26,9 +26,24 @@ export default function AdminLogs() {
   const [pageFilter, setPageFilter] = useState<string>("all");
   const [userSearch, setUserSearch] = useState<string>("");
 
+  // Debug logs
+  console.log("📱 [AdminLogs] Component mounted/re-rendered", {
+    isAuthenticated,
+    userRole: user?.role,
+    startDate,
+    endDate,
+  });
+
   const { data: logs, isLoading: logsLoading } = useQuery<AdminLog[]>({
     queryKey: ["/api/admin/logs", startDate, endDate],
     enabled: isAuthenticated && user?.role === "admin",
+  });
+
+  // Debug API response
+  console.log("🔍 [AdminLogs] Query status:", {
+    logsLoading,
+    logsCount: logs?.length || 0,
+    logs: logs?.slice(0, 2),
   });
 
   // Filter logs
@@ -41,6 +56,14 @@ export default function AdminLogs() {
       log.adminName.toLowerCase().includes(searchLower) ||
       log.adminEmail.toLowerCase().includes(searchLower);
     return matchAction && matchPage && matchUser;
+  });
+
+  // Debug filtered logs
+  console.log("📊 [AdminLogs] Filtered logs:", {
+    totalLogs: logs?.length || 0,
+    filteredCount: filteredLogs?.length || 0,
+    filters: { actionFilter, pageFilter, userSearch },
+    filtered: filteredLogs?.slice(0, 2),
   });
 
   // Get unique actions and pages for filter dropdowns

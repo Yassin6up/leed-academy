@@ -86,7 +86,18 @@ async function logAdminAction(userId: string, action: string, page: string, desc
     const adminName = user ? `${user.firstName} ${user.lastName}` : "Unknown";
     const adminEmail = user?.email || "unknown@example.com";
     
-    await storage.createAdminLog({
+    console.log("📝 [ADMIN LOG] Recording action:", {
+      adminId: userId,
+      adminName,
+      adminEmail,
+      action,
+      page,
+      description,
+      details,
+      timestamp: new Date().toISOString(),
+    });
+    
+    const log = await storage.createAdminLog({
       adminId: userId,
       adminName,
       adminEmail,
@@ -95,8 +106,10 @@ async function logAdminAction(userId: string, action: string, page: string, desc
       description,
       details,
     });
+    
+    console.log("✅ [ADMIN LOG] Successfully saved:", log);
   } catch (error) {
-    console.error("Failed to log admin action:", error);
+    console.error("❌ [ADMIN LOG] Failed to log admin action:", error);
   }
 }
 
@@ -1869,18 +1882,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/logs", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
+      const userId = (req.session as any)?.userId;
+      const user = await storage.getUser(userId);
+      
+      console.log("📊 [LOGS API] Fetching logs for user:", {
+        userId,
+        userName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+        startDate,
+        endDate,
+        timestamp: new Date().toISOString(),
+      });
+      
       let logs;
       
       if (startDate && endDate) {
         const start = new Date(startDate as string);
         const end = new Date(endDate as string);
         end.setHours(23, 59, 59, 999);
+        console.log("📅 [LOGS API] Date range query:", { start, end });
         logs = await storage.getAdminLogsByDateRange(start, end);
       } else {
+        console.log("📋 [LOGS API] Fetching all logs (no date range)");
         logs = await storage.getAllAdminLogs();
       }
+      
+      console.log(`✅ [LOGS API] Retrieved ${logs?.length || 0} logs`, logs?.slice(0, 2));
       res.json(logs);
     } catch (error: any) {
+      console.error("❌ [LOGS API] Error fetching logs:", error);
       res.status(500).json({ message: error.message });
     }
   });
