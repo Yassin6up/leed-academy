@@ -2,13 +2,15 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertCourseSchema, insertLessonSchema, insertPaymentSchema, insertProgressSchema, insertUserSchema } from "@shared/schema";
+import { insertCourseSchema, insertLessonSchema, insertPaymentSchema, insertProgressSchema, insertUserSchema, users } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
 import fs from "fs";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import {
   generateUniqueFilename,
   ensureDir,
@@ -1388,6 +1390,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(testimonial);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Referral API endpoints
+  app.get("/api/referral/stats", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const stats = await storage.getReferralStats(userId);
+      
+      // Get referrals with user details
+      const referrals = await db
+        .select()
+        .from(users)
+        .where(eq(users.referredBy, user.referralCode));
+
+      res.json({
+        code: user.referralCode,
+        count: stats.count,
+        earnings: stats.earnings,
+        referrals: referrals.map(u => ({
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          email: u.email,
+          subscriptionStatus: u.subscriptionStatus,
+          createdAt: u.createdAt,
+        })),
+        transactions: stats.transactions,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/referral/process-earnings", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      const { referrerId, referredUserId, amount } = req.body;
+
+      if (!referrerId || !referredUserId) {
+        return res.status(400).json({ message: "Missing referrer or referred user" });
+      }
+
+      const transaction = await storage.addReferralEarnings(referrerId, referredUserId, amount || 10);
+      res.json(transaction);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

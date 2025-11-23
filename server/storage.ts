@@ -236,7 +236,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getReferralCount(userId: string): Promise<number> {
-    const result = await db.select().from(users).where(eq(users.referredBy, users.referralCode));
     const user = await this.getUser(userId);
     if (!user?.referralCode) return 0;
     
@@ -245,6 +244,43 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(eq(users.referredBy, user.referralCode));
     return referrals.length;
+  }
+
+  async getReferralStats(userId: string): Promise<{ count: number; earnings: string; transactions: ReferralTransaction[] }> {
+    const user = await this.getUser(userId);
+    if (!user) return { count: 0, earnings: "0", transactions: [] };
+
+    const transactions = await db.query.referralTransactions.findMany({
+      where: (t) => eq(t.referrerId, userId),
+    });
+
+    return {
+      count: user.referralCount || 0,
+      earnings: user.referralEarnings || "0",
+      transactions,
+    };
+  }
+
+  async addReferralEarnings(referrerId: string, referredUserId: string, amount: number): Promise<ReferralTransaction> {
+    const transaction = await db.insert(referralTransactions).values({
+      referrerId,
+      referredUserId,
+      amount: amount.toString(),
+      status: "completed",
+    }).returning().then(r => r[0]);
+
+    // Update referrer's earnings and count
+    const referrer = await this.getUser(referrerId);
+    if (referrer) {
+      const currentEarnings = parseFloat(referrer.referralEarnings || "0");
+      const newCount = (referrer.referralCount || 0) + 1;
+      await db.update(users).set({
+        referralEarnings: (currentEarnings + amount).toString(),
+        referralCount: newCount,
+      }).where(eq(users.id, referrerId));
+    }
+
+    return transaction;
   }
 
   async deactivateUser(userId: string): Promise<User> {

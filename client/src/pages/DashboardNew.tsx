@@ -4,12 +4,13 @@ import { Footer } from "@/components/layout/Footer";
 import { useLanguage } from "@/lib/i18n";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BookOpen, CreditCard, Users, Settings, Star, Home, LogOut } from "lucide-react";
+import { BookOpen, CreditCard, Users, Settings, Star, Home, LogOut, Gift } from "lucide-react";
 import MyCourses from "@/components/dashboard/tabs/MyCourses";
 import MySubscription from "@/components/dashboard/tabs/MySubscription";
 import JoinGroupTab from "@/components/dashboard/tabs/JoinGroupTab";
 import SettingsTab from "@/components/dashboard/tabs/SettingsTab";
 import RatingsTab from "@/components/dashboard/tabs/RatingsTab";
+import ReferralTab from "@/components/dashboard/tabs/ReferralTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -86,6 +87,11 @@ export default function DashboardNew() {
       value: "subscription",
       label: language === "ar" ? "اشتراكي" : "Subscription",
       icon: CreditCard,
+    },
+    {
+      value: "referrals",
+      label: language === "ar" ? "الإحالات" : "Referrals",
+      icon: Gift,
     },
     {
       value: "join-group",
@@ -174,6 +180,7 @@ export default function DashboardNew() {
             <div className="flex-1 min-w-0 px-4 md:px-0">
               {activeTab === "courses" && <MyCourses />}
               {activeTab === "subscription" && <MySubscription />}
+              {activeTab === "referrals" && <ReferralTab />}
               {activeTab === "join-group" && <JoinGroupTab />}
               {activeTab === "ratings" && <RatingsTab />}
               {activeTab === "settings" && <SettingsTab />}
