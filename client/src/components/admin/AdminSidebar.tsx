@@ -114,7 +114,7 @@ export function AdminSidebar() {
   ];
 
   const systemItems = [
-    ...(user?.role === "admin" ? [{
+    ...(user?.role === "admin" || user?.role === "manager" ? [{
       title: language === "ar" ? "إدارة الأدوار" : "Role Management",
       icon: Users,
       path: "/admin/roles",
@@ -139,7 +139,6 @@ export function AdminSidebar() {
     if (user?.role === "support") {
       return businessItems.filter(item => 
         item.path === "/admin/payments" || 
-        item.path === "/admin/users" || 
         item.path === "/admin/withdrawals"
       );
     }

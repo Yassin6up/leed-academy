@@ -765,13 +765,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/users", isAuthenticated, requireAdmin, async (_req, res) => {
+  app.get("/api/admin/users", isAuthenticated, requireAdminRole, async (_req, res) => {
     const users = await storage.getAllUsers();
     res.json(users);
   });
 
-  // Create user by admin
-  app.post("/api/admin/users/create", isAuthenticated, requireAdmin, async (req, res) => {
+  // Create user by admin or manager
+  app.post("/api/admin/users/create", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { firstName, lastName, email, password, phone, role } = req.body;
       const adminId = (req.session as any)?.userId;
@@ -1792,7 +1792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update user role endpoint (admin only)
-  app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/users/:id", isAuthenticated, requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
       const { role } = req.body;
