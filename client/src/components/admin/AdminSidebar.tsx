@@ -10,6 +10,8 @@ import {
   Settings,
   GraduationCap,
   CreditCard,
+  Home,
+  LogOut,
 } from "lucide-react";
 import {
   Sidebar,
@@ -21,11 +23,43 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export function AdminSidebar() {
   const { t, language } = useLanguage();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      navigate("/");
+      
+      toast({
+        title: language === "ar" ? "تم تسجيل الخروج" : "Logged out",
+        description: language === "ar" ? "تم تسجيل خروجك بنجاح" : "You have been logged out successfully",
+      });
+    } catch (error) {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: language === "ar" ? "فشل تسجيل الخروج" : "Logout failed",
+        variant: "destructive",
+      });
+    }
+  };
 
   const overviewItems = [
     {
@@ -198,6 +232,26 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t border-border p-4 space-y-2">
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 text-sm"
+          onClick={() => navigate("/")}
+          data-testid="button-admin-home"
+        >
+          <Home className="h-4 w-4" />
+          {language === "ar" ? "الرئيسية" : "Home"}
+        </Button>
+        <Button
+          variant="destructive"
+          className="w-full justify-start gap-3 text-sm"
+          onClick={handleLogout}
+          data-testid="button-admin-logout"
+        >
+          <LogOut className="h-4 w-4" />
+          {language === "ar" ? "تسجيل الخروج" : "Logout"}
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
