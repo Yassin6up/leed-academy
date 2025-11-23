@@ -12,6 +12,7 @@ import {
   CreditCard,
   Home,
   LogOut,
+  ArrowDown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -97,6 +98,11 @@ export function AdminSidebar() {
       title: language === "ar" ? "المدفوعات" : "Payments",
       icon: CreditCard,
       path: "/admin/payments",
+    },
+    {
+      title: language === "ar" ? "طلبات السحب" : "Withdrawals",
+      icon: ArrowDown,
+      path: "/admin/withdrawals",
     },
   ];
 
