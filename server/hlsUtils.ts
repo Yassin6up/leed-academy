@@ -13,22 +13,14 @@ interface HLSConfig {
 }
 
 export class HLSConverter {
-  private static readonly HLS_CACHE = new Map<string, string>();
-
   // Generate AES-128 encryption key (16 bytes = 128 bits)
   static generateEncryptionKey(): string {
     return require("crypto").randomBytes(16).toString("hex");
   }
 
-  // Convert MP4 to HLS format with encryption
+  // Convert MP4 to HLS format with encryption (optimized for speed)
   static async convertToHLS(config: HLSConfig): Promise<string> {
-    const { videoPath, outputDir, segmentDuration = 6, encryptionKey } = config;
-
-    // Check cache first
-    const cacheKey = `${videoPath}:${encryptionKey}`;
-    if (this.HLS_CACHE.has(cacheKey)) {
-      return this.HLS_CACHE.get(cacheKey)!;
-    }
+    const { videoPath, outputDir, segmentDuration = 4, encryptionKey } = config;
 
     // Create output directory
     if (!fs.existsSync(outputDir)) {
@@ -39,6 +31,11 @@ export class HLSConverter {
     const keyPath = path.join(outputDir, "encryption.key");
     const keyInfoPath = path.join(outputDir, "key.info");
 
+    // Skip if already converted
+    if (fs.existsSync(manifestPath)) {
+      return manifestPath;
+    }
+
     // Write encryption key to file
     if (encryptionKey) {
       fs.writeFileSync(keyPath, Buffer.from(encryptionKey, "hex"));
@@ -46,20 +43,19 @@ export class HLSConverter {
     }
 
     try {
-      // FFmpeg command to convert to HLS with encryption
-      let ffmpegCmd = `ffmpeg -i "${videoPath}" -c:v libx264 -c:a aac -hls_time ${segmentDuration} -hls_list_size 0`;
+      // Optimized FFmpeg command for faster conversion
+      let ffmpegCmd = `ffmpeg -i "${videoPath}" -c:v libx264 -preset fast -crf 28 -c:a aac -b:a 128k -hls_time ${segmentDuration} -hls_list_size 0`;
 
       if (encryptionKey) {
         ffmpegCmd += ` -hls_key_info_file "${keyInfoPath}"`;
       }
 
-      ffmpegCmd += ` -hls_segment_type mpegts "${manifestPath}" -y`;
+      ffmpegCmd += ` -hls_segment_type mpegts "${manifestPath}" -y -v quiet`;
 
-      // Run conversion silently
-      await execAsync(ffmpegCmd, { maxBuffer: 10 * 1024 * 1024 });
-
-      // Cache result
-      this.HLS_CACHE.set(cacheKey, manifestPath);
+      // Run conversion
+      console.log(`Converting video to HLS: ${videoPath}`);
+      await execAsync(ffmpegCmd, { maxBuffer: 50 * 1024 * 1024, timeout: 300000 });
+      console.log(`Conversion complete: ${manifestPath}`);
 
       return manifestPath;
     } catch (error: any) {

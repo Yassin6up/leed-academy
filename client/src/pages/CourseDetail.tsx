@@ -349,81 +349,89 @@ export default function CourseDetail() {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex">
+      {/* Main Content Area - Mobile Responsive */}
+      <div className="flex-1 flex flex-col lg:flex-row">
         {/* Video & Content Area */}
-        <div className={`flex-1 transition-all ${sidebarCollapsed ? "mr-0" : "mr-80 lg:mr-96"}`}>
+        <div className={`flex-1 transition-all ${sidebarCollapsed ? "w-full" : "w-full lg:mr-80 xl:mr-96"}`}>
           {/* Video Player */}
-          <div className="bg-black select-none">
-            <div className="container mx-auto">
-              <video
-                ref={videoRef}
-                className="w-full aspect-video pointer-events-auto"
-                controls
-                data-testid="video-player"
-                controlsList="nodownload"
-                onContextMenu={handleVideoContextMenu}
-                onDragStart={handleVideoDragStart}
-                style={{
-                  userSelect: "none",
-                  WebkitUserSelect: "none",
-                  MsUserSelect: "none",
-                }}
-              >
-                {language === "ar"
-                  ? "متصفحك لا يدعم تشغيل الفيديو"
-                  : "Your browser does not support the video tag."}
-              </video>
-            </div>
+          <div className="bg-black select-none w-full">
+            <video
+              ref={videoRef}
+              className="w-full aspect-video pointer-events-auto"
+              controls
+              data-testid="video-player"
+              controlsList="nodownload"
+              onContextMenu={handleVideoContextMenu}
+              onDragStart={handleVideoDragStart}
+              style={{
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                MsUserSelect: "none",
+              }}
+            >
+              {language === "ar"
+                ? "متصفحك لا يدعم تشغيل الفيديو"
+                : "Your browser does not support the video tag."}
+            </video>
           </div>
 
-          {/* Navigation Buttons */}
-          <div className="border-b bg-background">
-            <div className="container mx-auto px-6 py-4">
-              <div className="flex items-center justify-between">
+          {/* Navigation Buttons - Mobile Responsive */}
+          <div className="border-b bg-background w-full">
+            <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+              <div className="flex items-center justify-between gap-2 sm:gap-4">
                 <Button
-                  variant="outline"
+                  variant="default"
+                  size="sm"
                   onClick={() => setCurrentLessonIndex(currentLessonIndex - 1)}
                   disabled={!canGoPrev}
                   data-testid="button-prev-lesson"
+                  className="flex-1 sm:flex-none"
                 >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  {language === "ar" ? "السابق" : "Previous"}
+                  <ChevronLeft className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">{language === "ar" ? "السابق" : "Previous"}</span>
                 </Button>
+                <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>{currentLessonIndex + 1}</span>
+                  <span>/</span>
+                  <span>{lessons.length}</span>
+                </div>
                 <Button
+                  variant="default"
+                  size="sm"
                   onClick={() => setCurrentLessonIndex(currentLessonIndex + 1)}
                   disabled={!canGoNext || !isLessonAccessible(lessons[currentLessonIndex + 1], currentLessonIndex + 1)}
                   data-testid="button-next-lesson"
+                  className="flex-1 sm:flex-none"
                 >
-                  {language === "ar" ? "التالي" : "Next"}
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                  <span className="hidden sm:inline">{language === "ar" ? "التالي" : "Next"}</span>
+                  <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
                 </Button>
               </div>
             </div>
           </div>
 
-          {/* Tabbed Content */}
-          <div className="container mx-auto px-6 py-6">
+          {/* Tabbed Content - Mobile Responsive */}
+          <div className="w-full px-3 sm:px-4 md:px-6 py-4 sm:py-6">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList data-testid="tabs-content">
-                <TabsTrigger value="overview" data-testid="tab-overview">
+              <TabsList data-testid="tabs-content" className="grid w-full grid-cols-3 sm:inline-flex">
+                <TabsTrigger value="overview" data-testid="tab-overview" className="text-xs sm:text-sm">
                   {language === "ar" ? "نظرة عامة" : "Overview"}
                 </TabsTrigger>
-                <TabsTrigger value="resources" data-testid="tab-resources">
+                <TabsTrigger value="resources" data-testid="tab-resources" className="text-xs sm:text-sm">
                   {language === "ar" ? "الموارد" : "Resources"}
                 </TabsTrigger>
-                <TabsTrigger value="meetings" data-testid="tab-meetings">
+                <TabsTrigger value="meetings" data-testid="tab-meetings" className="text-xs sm:text-sm">
                   {language === "ar" ? "الجلسات" : "Sessions"}
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview" className="mt-6">
-                <div className="space-y-6">
+              <TabsContent value="overview" className="mt-4 sm:mt-6">
+                <div className="space-y-4 sm:space-y-6">
                   <div>
-                    <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
+                    <h2 className="text-xl sm:text-2xl font-heading font-bold text-foreground mb-2">
                       {language === "ar" ? currentLesson?.titleAr : currentLesson?.titleEn}
                     </h2>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm sm:text-base text-muted-foreground">
                       {language === "ar" ? currentLesson?.descriptionAr : currentLesson?.descriptionEn}
                     </p>
                   </div>
@@ -431,40 +439,40 @@ export default function CourseDetail() {
                   <Separator />
 
                   <div>
-                    <h3 className="text-xl font-heading font-semibold text-foreground mb-4">
+                    <h3 className="text-lg sm:text-xl font-heading font-semibold text-foreground mb-4">
                       {language === "ar" ? "عن هذه الدورة" : "About this Course"}
                     </h3>
-                    <p className="text-muted-foreground mb-4">
+                    <p className="text-sm sm:text-base text-muted-foreground mb-4">
                       {language === "ar" ? course.descriptionAr : course.descriptionEn}
                     </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="p-4 border rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+                      <div className="p-2 sm:p-4 border rounded-lg">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                           {language === "ar" ? "المستوى" : "Level"}
                         </p>
-                        <p className="font-semibold text-foreground">
+                        <p className="text-sm sm:text-base font-semibold text-foreground">
                           {t("courses.level")} {course.level}
                         </p>
                       </div>
-                      <div className="p-4 border rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-1">
+                      <div className="p-2 sm:p-4 border rounded-lg">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                           {language === "ar" ? "الدروس" : "Lessons"}
                         </p>
-                        <p className="font-semibold text-foreground">{totalLessons}</p>
+                        <p className="text-sm sm:text-base font-semibold text-foreground">{totalLessons}</p>
                       </div>
-                      <div className="p-4 border rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-1">
+                      <div className="p-2 sm:p-4 border rounded-lg">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                           {language === "ar" ? "المدة" : "Duration"}
                         </p>
-                        <p className="font-semibold text-foreground">
+                        <p className="text-sm sm:text-base font-semibold text-foreground">
                           {course.duration || 8} {t("courses.hours")}
                         </p>
                       </div>
-                      <div className="p-4 border rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-1">
+                      <div className="p-2 sm:p-4 border rounded-lg">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                           {language === "ar" ? "المدرب" : "Instructor"}
                         </p>
-                        <p className="font-semibold text-foreground">
+                        <p className="text-sm sm:text-base font-semibold text-foreground">
                           {language === "ar" ? course.instructorAr : course.instructorEn}
                         </p>
                       </div>

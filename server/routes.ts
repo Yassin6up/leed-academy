@@ -1051,6 +1051,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             videoUrl: `/uploads/courses/${validated.courseId}/videos/${lessonId}/${path.basename(finalPath)}`,
             videoFilePath: finalPath,
           });
+
+          // Pre-convert to HLS for faster playback (non-blocking)
+          setImmediate(async () => {
+            try {
+              const encryptionKey = HLSConverter.generateEncryptionKey();
+              const hlsDir = path.join(process.cwd(), "uploads", "hls", lessonId);
+              await HLSConverter.convertToHLS({
+                videoPath: finalPath,
+                outputDir: hlsDir,
+                segmentDuration: 4,
+                encryptionKey,
+              });
+              console.log(`Pre-converted video to HLS: ${lessonId}`);
+            } catch (error: any) {
+              console.error(`Failed to pre-convert video ${lessonId}:`, error.message);
+            }
+          });
         }
 
         res.json(lesson);
