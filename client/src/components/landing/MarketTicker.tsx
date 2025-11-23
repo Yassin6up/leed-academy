@@ -16,8 +16,7 @@ export function MarketTicker() {
     // Clear any existing content
     containerRef.current.innerHTML = `
       <div class="tradingview-widget-container" style="height: 44px;">
-        <div class="tradingview-widget-container__widget" style="height: calc(100% - 32px);"></div>
-        <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Track all markets on TradingView</span></a></div>
+        <div class="tradingview-widget-container__widget" style="height: 100%;"></div>
       </div>
     `;
 
