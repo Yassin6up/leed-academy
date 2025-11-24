@@ -1992,12 +1992,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).send("Not found");
       }
 
+      // Get course to check if it's free
+      const course = await storage.getCourse(lesson.courseId);
+      if (!course) {
+        return res.status(404).send("Not found");
+      }
+
       // Check user subscription/access
       const user = await storage.getUser(userId);
       const userSub = await storage.getUserSubscription(userId);
 
-      // Allow access if user has active subscription or is admin
-      const hasAccess = user?.role === "admin" || userSub?.status === "active";
+      // Allow access if:
+      // 1. User is admin
+      // 2. User has active subscription
+      // 3. Course is free
+      // 4. Lesson is free
+      const hasAccess = 
+        user?.role === "admin" || 
+        userSub?.status === "active" || 
+        course.isFree || 
+        lesson.isFree;
+      
       if (!hasAccess) {
         return res.status(403).send("Forbidden");
       }
