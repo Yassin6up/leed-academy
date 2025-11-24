@@ -2,11 +2,14 @@ import { useLanguage } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { MessageCircle, Phone, ExternalLink } from "lucide-react";
+import { MessageCircle, Phone, ExternalLink, Lock } from "lucide-react";
 import type { Setting } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
 
 export default function JoinGroup() {
   const { language } = useLanguage();
+  const { user } = useAuth();
 
   const { data: settingsData, isLoading } = useQuery<Setting[]>({
     queryKey: ["/api/settings"],
@@ -15,10 +18,55 @@ export default function JoinGroup() {
   const telegramLink = settingsData?.find(s => s.key === "telegram_group_link")?.value;
   const whatsappLink = settingsData?.find(s => s.key === "whatsapp_group_link")?.value;
 
+  const hasActiveSubscription = user?.subscriptionStatus === "active";
+
   if (isLoading) {
     return (
       <div className="p-6">
         <div className="h-96 bg-muted animate-pulse rounded-lg" />
+      </div>
+    );
+  }
+
+  // Show subscription required message if user doesn't have active subscription
+  if (!hasActiveSubscription) {
+    return (
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-heading font-bold text-foreground" data-testid="text-join-group-title">
+            {language === "ar" ? "انضم لمجموعاتنا" : "Join Our Groups"}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {language === "ar"
+              ? "تواصل مع زملائك الطلاب واحصل على الدعم والمساعدة"
+              : "Connect with fellow students and get support and assistance"}
+          </p>
+        </div>
+
+        <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardContent className="p-8">
+            <div className="flex items-start gap-4">
+              <Lock className="h-8 w-8 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-1" />
+              <div className="space-y-4 flex-1">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    {language === "ar" ? "اشتراك مطلوب" : "Subscription Required"}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {language === "ar"
+                      ? "يجب أن يكون لديك اشتراك نشط لللانضمام إلى مجموعات الطلاب على Telegram و WhatsApp. الاشتراك يمنحك الوصول إلى مجموعاتنا الحصرية والدعم المباشر من المدربين."
+                      : "You need an active subscription to join our student groups on Telegram and WhatsApp. Subscription gives you access to our exclusive groups and direct support from instructors."}
+                  </p>
+                </div>
+                <Button asChild size="lg" className="w-full">
+                  <Link href="/dashboard?tab=subscription" data-testid="button-goto-subscription">
+                    {language === "ar" ? "شراء الاشتراك الآن" : "Get Subscription Now"}
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
