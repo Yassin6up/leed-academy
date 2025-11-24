@@ -210,9 +210,9 @@ export default function CoursePreview() {
                       <Crown className="h-3 w-3" />
                       {language === "ar" ? plan.nameAr : plan.nameEn}
                     </Badge>
-                  ) : (
+                  ) : course.isFree ? (
                     <Badge variant="default">{language === "ar" ? "مجاني" : "Free"}</Badge>
-                  )}
+                  ) : null}
 
                   <Badge variant="outline">
                     {language === "ar" ? `المستوى ${course.level}` : `Level ${course.level}`}
@@ -270,11 +270,11 @@ export default function CoursePreview() {
                             </p>
                           </div>
                         </div>
-                      ) : (
+                      ) : course.isFree ? (
                         <Badge variant="default" className="text-lg px-4 py-2 w-full justify-center">
                           {language === "ar" ? "مجاني" : "Free"}
                         </Badge>
-                      )}
+                      ) : null}
 
                       {/* Start Course Button */}
                       <Button
