@@ -5,8 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, BookOpen, Lock, CheckCircle2, Eye } from "lucide-react";
-import type { Course } from "@shared/schema";
+import { Clock, BookOpen, Lock, CheckCircle2, Eye, Crown } from "lucide-react";
+import type { Course, SubscriptionPlan } from "@shared/schema";
 import { Link } from "wouter";
 import { useState } from "react";
 import level1Image from "@assets/generated_images/Level_1_course_thumbnail_58124b24.png";
@@ -22,6 +22,10 @@ export default function Courses() {
 
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["/api/courses"],
+  });
+
+  const { data: plans = [] } = useQuery<SubscriptionPlan[]>({
+    queryKey: ["/api/subscription-plans"],
   });
 
   const levelImages: Record<number, string> = {
@@ -150,14 +154,19 @@ export default function Courses() {
                           }}
                         />
                         <div className="absolute top-4 left-4 flex gap-2">
-                          {course.isFree && (
+                          {course.requiredPlanId && plans?.length > 0 ? (
+                            <Badge variant="default" className="gap-2 flex items-center" data-testid={`badge-plan-${course.id}`}>
+                              <Crown className="h-3 w-3" />
+                              {language === "ar" ? plans.find(p => p.id === course.requiredPlanId)?.nameAr : plans.find(p => p.id === course.requiredPlanId)?.nameEn}
+                            </Badge>
+                          ) : course.isFree ? (
                             <Badge
                               className="bg-green-500 text-white"
                               data-testid="badge-free"
                             >
                               {t("courses.free")}
                             </Badge>
-                          )}
+                          ) : null}
                           <Badge data-testid={`badge-level-${course.level}`}>
                             {t("courses.level")} {course.level}
                           </Badge>
