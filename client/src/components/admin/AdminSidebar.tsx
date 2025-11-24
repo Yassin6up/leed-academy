@@ -54,12 +54,15 @@ export function AdminSidebar() {
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      navigate("/");
       
       toast({
         title: language === "ar" ? "تم تسجيل الخروج" : "Logged out",
         description: language === "ar" ? "تم تسجيل خروجك بنجاح" : "You have been logged out successfully",
       });
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     } catch (error) {
       toast({
         title: language === "ar" ? "خطأ" : "Error",
