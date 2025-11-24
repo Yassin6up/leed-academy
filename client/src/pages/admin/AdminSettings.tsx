@@ -204,7 +204,7 @@ export default function AdminSettings() {
 
   const updateSocialLinksMutation = useMutation({
     mutationFn: async (data: SocialLinksForm) => {
-      return await apiRequest("/api/settings", "POST", {
+      return await apiRequest("POST", "/api/settings", {
         settings: [
           { key: "telegram_group_link", value: data.telegramGroupLink || "" },
           { key: "whatsapp_group_link", value: data.whatsappGroupLink || "" },
