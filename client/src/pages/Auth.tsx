@@ -124,6 +124,17 @@ export default function Auth() {
 
       if (!response.ok) {
         const error = await response.json();
+        // Handle unverified email specifically
+        if (response.status === 403 && error.isVerified === false) {
+          toast({
+            title: language === "ar" ? "البريد الإلكتروني غير مفعل" : "Email not verified",
+            description: language === "ar"
+              ? "تم إرسال رابط تفعيل جديد إلى بريدك الإلكتروني. يرجى التحقق من بريدك الإلكتروني."
+              : "A new verification link has been sent to your email. Please check your inbox.",
+            variant: error.emailResent ? "default" : "destructive",
+          });
+          return;
+        }
         throw new Error(error.message || "Login failed");
       }
 
@@ -136,7 +147,7 @@ export default function Auth() {
 
       // Invalidate queries and redirect
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+
       if (result.user.role === "admin") {
         navigate("/admin/dashboard");
       } else {
@@ -175,14 +186,27 @@ export default function Auth() {
 
       const result = await response.json();
 
+      if (result.requireVerification) {
+        toast({
+          title: language === "ar" ? "تم التسجيل بنجاح" : "Registration successful",
+          description: language === "ar"
+            ? "يرجى التحقق من بريدك الإلكتروني لتفعيل حسابك"
+            : "Please check your email to verify your account",
+        });
+        // Don't redirect, maybe switch to login tab or just stay here
+        // Optional: clear form
+        registerForm.reset();
+        return;
+      }
+
       toast({
         title: language === "ar" ? "تم التسجيل بنجاح" : "Registration successful",
-        description: language === "ar" ? "مرحباً بك في Leedacademya!" : "Welcome to Leedacademya!",
+        description: language === "ar" ? "مرحباً بك في Leed Academy!" : "Welcome to Leed Academy!",
       });
 
       // Invalidate queries and redirect
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+
       if (result.user.role === "admin") {
         navigate("/admin/dashboard");
       } else {
@@ -211,7 +235,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      
+
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
@@ -219,8 +243,8 @@ export default function Auth() {
               {language === "ar" ? "مرحباً بك" : "Welcome"}
             </CardTitle>
             <CardDescription className="text-center">
-              {language === "ar" 
-                ? "سجل الدخول أو أنشئ حساباً جديداً" 
+              {language === "ar"
+                ? "سجل الدخول أو أنشئ حساباً جديداً"
                 : "Login or create a new account"}
             </CardDescription>
           </CardHeader>
@@ -282,8 +306,8 @@ export default function Auth() {
                       data-testid="button-login-submit"
                     >
                       <LogIn className="w-4 h-4 mr-2" />
-                      {isSubmitting 
-                        ? (language === "ar" ? "جاري تسجيل الدخول..." : "Logging in...") 
+                      {isSubmitting
+                        ? (language === "ar" ? "جاري تسجيل الدخول..." : "Logging in...")
                         : (language === "ar" ? "تسجيل الدخول" : "Login")}
                     </Button>
                   </form>
@@ -373,7 +397,7 @@ export default function Auth() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{language === "ar" ? "رقم الهاتف (اختياري)" : "Phone (Optional)"}</FormLabel>
+                          <FormLabel>{language === "ar" ? "رقم الهاتف " : "Phone "}</FormLabel>
                           <FormControl>
                             <Input
                               type="tel"
@@ -401,8 +425,8 @@ export default function Auth() {
                             referralValid === true
                               ? "border-green-500 pr-10"
                               : referralValid === false
-                              ? "border-red-500 pr-10"
-                              : "pr-10"
+                                ? "border-red-500 pr-10"
+                                : "pr-10"
                           }
                         />
                         {validatingReferral && (
@@ -437,8 +461,8 @@ export default function Auth() {
                       data-testid="button-register-submit"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
-                      {isSubmitting 
-                        ? (language === "ar" ? "جاري إنشاء الحساب..." : "Creating account...") 
+                      {isSubmitting
+                        ? (language === "ar" ? "جاري إنشاء الحساب..." : "Creating account...")
                         : (language === "ar" ? "إنشاء حساب" : "Register")}
                     </Button>
                   </form>

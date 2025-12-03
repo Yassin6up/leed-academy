@@ -20,6 +20,7 @@ import News from "@/pages/News";
 import DashboardNew from "@/pages/DashboardNew";
 import Subscribe from "@/pages/Subscribe";
 import Auth from "@/pages/Auth";
+import VerifyEmail from "@/pages/auth/VerifyEmail";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
@@ -41,6 +42,7 @@ function Router() {
       {/* Public Routes */}
       <Route path="/" component={Landing} />
       <Route path="/auth" component={Auth} />
+      <Route path="/auth/verify" component={VerifyEmail} />
       <Route path="/about" component={About} />
       <Route path="/services" component={Services} />
       <Route path="/contact" component={Contact} />

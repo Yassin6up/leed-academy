@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Wallet, Building2, Upload, CheckCircle2 } from "lucide-react";
+import { Wallet, Building2, CheckCircle2, CreditCard, Smartphone } from "lucide-react";
 import type { SubscriptionPlan, PaymentSettings } from "@shared/schema";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,60 +22,62 @@ export default function Subscribe() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<"crypto" | "bank">("crypto");
-  const [proofFile, setProofFile] = useState<File | null>(null);
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-    }
-  }, [isAuthenticated, authLoading, toast]);
+  const [paymentMethod, setPaymentMethod] = useState<"crypto" | "bank" | "card" | "mobile_wallet">("card");
+  const [paymentData, setPaymentData] = useState<any>(null);
 
   const { data: plan } = useQuery<SubscriptionPlan>({
     queryKey: ["/api/subscription-plans", params?.planId],
-    enabled: !!params?.planId && isAuthenticated,
+    enabled: !!params?.planId,
   });
 
   const { data: paymentSettings } = useQuery<PaymentSettings>({
     queryKey: ["/api/payment-settings"],
-    enabled: isAuthenticated,
   });
 
   const submitPaymentMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const res = await fetch("/api/payments", {
-        method: "POST",
-        body: data,
-        credentials: "include",
-      });
-      
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: "Failed to submit payment" }));
-        throw new Error(error.message || "Failed to submit payment");
+      // If user is authenticated, submit to backend
+      if (isAuthenticated) {
+        const res = await fetch("/api/payments", {
+          method: "POST",
+          body: data,
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ message: "Failed to submit payment" }));
+          throw new Error(error.message || "Failed to submit payment");
+        }
+
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return res.json();
+        }
+        return undefined;
       }
       
-      // Handle empty response or JSON response
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        return res.json();
-      }
-      return undefined;
+      // If not authenticated, just store data locally and proceed
+      return { stored: true };
     },
-    onSuccess: () => {
-      setStep(3);
+    onSuccess: (result, data) => {
+      if (isAuthenticated) {
+        // Already logged in, go to success page
+        setStep(4);
+      } else {
+        // Not logged in, store payment data and go to account creation
+        const formDataObj: any = {};
+        data.forEach((value, key) => {
+          formDataObj[key] = value;
+        });
+        setPaymentData(formDataObj);
+        setStep(3);
+      }
       toast({
         title: t("common.success"),
         description:
           language === "ar"
-            ? "تم إرسال إثبات الدفع بنجاح. سنقوم بمراجعته قريباً."
-            : "Payment proof submitted successfully. We'll review it soon.",
+            ? "تم حفظ معلومات الدفع. الرجاء إنشاء حساب للمتابعة."
+            : "Payment information saved. Please create an account to continue.",
       });
     },
     onError: (error: Error) => {
@@ -94,14 +96,10 @@ export default function Subscribe() {
     formData.append("method", paymentMethod);
     formData.append("amount", plan?.price || "0");
 
-    if (proofFile) {
-      formData.append("proofImage", proofFile);
-    }
-
     submitPaymentMutation.mutate(formData);
   };
 
-  if (authLoading || !isAuthenticated || !plan) {
+  if (!plan) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -125,12 +123,11 @@ export default function Subscribe() {
               {/* Progress Indicator */}
               <div className="mb-12">
                 <div className="flex items-center justify-between mb-4">
-                  {[1, 2, 3].map((s) => (
+                  {(isAuthenticated ? [1, 2, 3] : [1, 2, 3, 4]).map((s) => (
                     <div
                       key={s}
-                      className={`flex-1 h-2 rounded-full mx-1 ${
-                        s <= step ? "bg-primary" : "bg-muted"
-                      }`}
+                      className={`flex-1 h-2 rounded-full mx-1 ${s <= step ? "bg-primary" : "bg-muted"
+                        }`}
                     />
                   ))}
                 </div>
@@ -141,8 +138,13 @@ export default function Subscribe() {
                   <span className={step >= 2 ? "text-foreground" : "text-muted-foreground"}>
                     {t("subscription.payment-method")}
                   </span>
-                  <span className={step >= 3 ? "text-foreground" : "text-muted-foreground"}>
-                    {t("subscription.upload-proof")}
+                  {!isAuthenticated && (
+                    <span className={step >= 3 ? "text-foreground" : "text-muted-foreground"}>
+                      {language === "ar" ? "إنشاء حساب" : "Create Account"}
+                    </span>
+                  )}
+                  <span className={step >= (isAuthenticated ? 3 : 4) ? "text-foreground" : "text-muted-foreground"}>
+                    {language === "ar" ? "تأكيد" : "Complete"}
                   </span>
                 </div>
               </div>
@@ -191,43 +193,41 @@ export default function Subscribe() {
                       <RadioGroup
                         value={paymentMethod}
                         onValueChange={(value) =>
-                          setPaymentMethod(value as "crypto" | "bank")
+                          setPaymentMethod(value as "crypto" | "bank" | "card" | "mobile_wallet")
                         }
                         data-testid="radio-payment-method"
                       >
                         <div className="flex items-center space-x-2 p-4 rounded-lg border hover-elevate active-elevate-2">
-                          <RadioGroupItem value="crypto" id="crypto" />
+                          <RadioGroupItem value="card" id="card" />
                           <Label
-                            htmlFor="crypto"
+                            htmlFor="card"
                             className="flex items-center gap-3 flex-1 cursor-pointer"
                           >
-                            <Wallet className="h-5 w-5 text-primary" />
+                            <CreditCard className="h-5 w-5 text-primary" />
                             <div>
                               <p className="font-medium text-foreground">
-                                {t("subscription.crypto")}
+                                {language === "ar" ? "بطاقة ائتمان/خصم" : "Credit/Debit Card"}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                BTC, ETH, USDT
+                                Visa, Mastercard
                               </p>
                             </div>
                           </Label>
                         </div>
 
                         <div className="flex items-center space-x-2 p-4 rounded-lg border hover-elevate active-elevate-2">
-                          <RadioGroupItem value="bank" id="bank" />
+                          <RadioGroupItem value="mobile_wallet" id="mobile_wallet" />
                           <Label
-                            htmlFor="bank"
+                            htmlFor="mobile_wallet"
                             className="flex items-center gap-3 flex-1 cursor-pointer"
                           >
-                            <Building2 className="h-5 w-5 text-primary" />
+                            <Smartphone className="h-5 w-5 text-primary" />
                             <div>
                               <p className="font-medium text-foreground">
-                                {t("subscription.bank")}
+                                {language === "ar" ? "محافظ موبايل" : "Mobile Wallets"}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {language === "ar"
-                                  ? "تحويل مصرفي"
-                                  : "Wire transfer"}
+                                {language === "ar" ? "فودافون كاش، أورنج، إلخ" : "Vodafone Cash, Orange, etc"}
                               </p>
                             </div>
                           </Label>
@@ -240,7 +240,7 @@ export default function Subscribe() {
                             <h3 className="font-semibold text-foreground mb-4">
                               {language === "ar" ? "عناوين المحافظ" : "Wallet Addresses"}
                             </h3>
-                            
+
                             {paymentSettings.btcAddress && (
                               <div>
                                 <Label className="text-sm font-medium text-foreground">Bitcoin (BTC)</Label>
@@ -315,8 +315,8 @@ export default function Subscribe() {
                             {paymentSettings.paymentInstructionsEn && (
                               <div className="mt-4 pt-4 border-t border-border">
                                 <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                  {language === "ar" 
-                                    ? paymentSettings.paymentInstructionsAr 
+                                  {language === "ar"
+                                    ? paymentSettings.paymentInstructionsAr
                                     : paymentSettings.paymentInstructionsEn}
                                 </p>
                               </div>
@@ -334,10 +334,316 @@ export default function Subscribe() {
                               data-testid="input-wallet-address"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                              {language === "ar" 
+                              {language === "ar"
                                 ? "أدخل عنوان محفظتك التي أرسلت منها الدفع للتحقق"
                                 : "Enter your wallet address used for payment verification"}
                             </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {paymentMethod === "card" && (
+                        <div className="space-y-4">
+                          {paymentSettings && (
+                            <div className="bg-primary/5 border border-primary/20 p-6 rounded-lg space-y-4">
+                              <h3 className="font-semibold text-foreground mb-4">
+                                {language === "ar" ? "الدفع ببطاقة الائتمان/الخصم" : "Credit/Debit Card Payment"}
+                              </h3>
+
+                              <div className="flex items-center justify-center gap-4 mb-6">
+                                <div className="text-4xl">💳</div>
+                                <div className="text-center">
+                                  <p className="text-lg font-medium text-foreground">
+                                    {language === "ar" ? "نقبل" : "We accept"}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">Visa • Mastercard</p>
+                                </div>
+                              </div>
+
+                              {paymentSettings.cardProcessorName && (
+                                <div className="bg-background/50 p-4 rounded border">
+                                  <Label className="text-sm font-medium text-muted-foreground">
+                                    {language === "ar" ? "معالج الدفع" : "Payment Processor"}
+                                  </Label>
+                                  <p className="text-foreground font-medium">{paymentSettings.cardProcessorName}</p>
+                                </div>
+                              )}
+
+                              {(paymentSettings.cardInstructionsEn || paymentSettings.cardInstructionsAr) && (
+                                <div className="mt-4 pt-4 border-t border-border">
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                    {language === "ar"
+                                      ? paymentSettings.cardInstructionsAr
+                                      : paymentSettings.cardInstructionsEn}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="bg-muted/30 p-4 rounded-lg space-y-4">
+                            <h4 className="font-medium text-foreground">
+                              {language === "ar" ? "معلومات البطاقة" : "Card Details"}
+                            </h4>
+                            
+                            <div>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">
+                                {language === "ar" ? "رقم البطاقة" : "Card Number"}
+                              </Label>
+                              <Input
+                                name="cardNumber"
+                                placeholder="1234 5678 9012 3456"
+                                maxLength={19}
+                                required
+                                data-testid="input-card-number"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium text-foreground mb-2 block">
+                                  {language === "ar" ? "تاريخ الانتهاء" : "Expiry Date"}
+                                </Label>
+                                <Input
+                                  name="cardExpiry"
+                                  placeholder="MM/YY"
+                                  maxLength={5}
+                                  required
+                                  data-testid="input-card-expiry"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-foreground mb-2 block">
+                                  CVV
+                                </Label>
+                                <Input
+                                  name="cardCvv"
+                                  placeholder="123"
+                                  maxLength={4}
+                                  type="password"
+                                  required
+                                  data-testid="input-card-cvv"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">
+                                {language === "ar" ? "اسم حامل البطاقة" : "Cardholder Name"}
+                              </Label>
+                              <Input
+                                name="cardholderName"
+                                placeholder={language === "ar" ? "الاسم كما هو مكتوب على البطاقة" : "Name as on card"}
+                                required
+                                data-testid="input-cardholder-name"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {paymentMethod === "mobile_wallet" && (
+                        <div className="space-y-4">
+                          {paymentSettings && (
+                            <div className="bg-primary/5 border border-primary/20 p-6 rounded-lg space-y-4">
+                              <h3 className="font-semibold text-foreground mb-4">
+                                {language === "ar" ? "محافظ الموبايل المصرية" : "Egyptian Mobile Wallets"}
+                              </h3>
+
+                              <div className="grid gap-4">
+                                {paymentSettings.vodafoneCashNumber && (
+                                  <div className="bg-background/50 p-4 rounded border">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <div className="text-2xl">📱</div>
+                                      <Label className="text-sm font-medium text-foreground">Vodafone Cash</Label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <code className="flex-1 bg-primary/5 px-3 py-2 rounded text-sm border border-primary/20">
+                                        {paymentSettings.vodafoneCashNumber}
+                                      </code>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(paymentSettings.vodafoneCashNumber || "");
+                                          toast({ title: language === "ar" ? "تم النسخ" : "Copied" });
+                                        }}
+                                        data-testid="button-copy-vodafone"
+                                      >
+                                        {language === "ar" ? "نسخ" : "Copy"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {paymentSettings.orangeMoneyNumber && (
+                                  <div className="bg-background/50 p-4 rounded border">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <div className="text-2xl">🟠</div>
+                                      <Label className="text-sm font-medium text-foreground">Orange Money</Label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <code className="flex-1 bg-primary/5 px-3 py-2 rounded text-sm border border-primary/20">
+                                        {paymentSettings.orangeMoneyNumber}
+                                      </code>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(paymentSettings.orangeMoneyNumber || "");
+                                          toast({ title: language === "ar" ? "تم النسخ" : "Copied" });
+                                        }}
+                                        data-testid="button-copy-orange"
+                                      >
+                                        {language === "ar" ? "نسخ" : "Copy"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {paymentSettings.etisalatCashNumber && (
+                                  <div className="bg-background/50 p-4 rounded border">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <div className="text-2xl">💚</div>
+                                      <Label className="text-sm font-medium text-foreground">Etisalat Cash</Label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <code className="flex-1 bg-primary/5 px-3 py-2 rounded text-sm border border-primary/20">
+                                        {paymentSettings.etisalatCashNumber}
+                                      </code>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(paymentSettings.etisalatCashNumber || "");
+                                          toast({ title: language === "ar" ? "تم النسخ" : "Copied" });
+                                        }}
+                                        data-testid="button-copy-etisalat"
+                                      >
+                                        {language === "ar" ? "نسخ" : "Copy"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {paymentSettings.wePayNumber && (
+                                  <div className="bg-background/50 p-4 rounded border">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <div className="text-2xl">🟣</div>
+                                      <Label className="text-sm font-medium text-foreground">WE Pay</Label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <code className="flex-1 bg-primary/5 px-3 py-2 rounded text-sm border border-primary/20">
+                                        {paymentSettings.wePayNumber}
+                                      </code>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(paymentSettings.wePayNumber || "");
+                                          toast({ title: language === "ar" ? "تم النسخ" : "Copied" });
+                                        }}
+                                        data-testid="button-copy-wepay"
+                                      >
+                                        {language === "ar" ? "نسخ" : "Copy"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {paymentSettings.instapayNumber && (
+                                  <div className="bg-background/50 p-4 rounded border">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <div className="text-2xl">⚡</div>
+                                      <Label className="text-sm font-medium text-foreground">InstaPay</Label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <code className="flex-1 bg-primary/5 px-3 py-2 rounded text-sm border border-primary/20">
+                                        {paymentSettings.instapayNumber}
+                                      </code>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(paymentSettings.instapayNumber || "");
+                                          toast({ title: language === "ar" ? "تم النسخ" : "Copied" });
+                                        }}
+                                        data-testid="button-copy-instapay"
+                                      >
+                                        {language === "ar" ? "نسخ" : "Copy"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {(paymentSettings.mobileWalletInstructionsEn || paymentSettings.mobileWalletInstructionsAr) && (
+                                <div className="mt-4 pt-4 border-t border-border">
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                    {language === "ar"
+                                      ? paymentSettings.mobileWalletInstructionsAr
+                                      : paymentSettings.mobileWalletInstructionsEn}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="bg-muted/30 p-4 rounded-lg space-y-4">
+                            <h4 className="font-medium text-foreground">
+                              {language === "ar" ? "معلومات الدفع" : "Payment Information"}
+                            </h4>
+                            
+                            <div>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">
+                                {language === "ar" ? "رقم هاتفك (المرسل)" : "Your Phone Number (Sender)"}
+                              </Label>
+                              <Input
+                                name="senderPhone"
+                                placeholder={language === "ar" ? "01xxxxxxxxx" : "Your mobile number"}
+                                required
+                                data-testid="input-sender-phone"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {language === "ar"
+                                  ? "رقم هاتفك الذي ستدفع منه"
+                                  : "Your phone number used for payment"}
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">
+                                {language === "ar" ? "رقم المحفظة المستلمة" : "Recipient Wallet Number"}
+                              </Label>
+                              <Input
+                                name="recipientNumber"
+                                placeholder={language === "ar" ? "رقم المحفظة الذي ستحول إليه" : "Wallet number you're sending to"}
+                                required
+                                data-testid="input-recipient-number"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {language === "ar"
+                                  ? "اختر أحد أرقام المحفظة المعروضة أعلاه"
+                                  : "Select one of the wallet numbers shown above"}
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">
+                                {language === "ar" ? "اسمك الكامل" : "Your Full Name"}
+                              </Label>
+                              <Input
+                                name="senderName"
+                                placeholder={language === "ar" ? "الاسم الكامل" : "Full name"}
+                                required
+                                data-testid="input-sender-name"
+                              />
+                            </div>
                           </div>
                         </div>
                       )}
@@ -417,42 +723,14 @@ export default function Subscribe() {
                           {paymentSettings.paymentInstructionsEn && (
                             <div className="mt-4 pt-4 border-t border-border">
                               <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                {language === "ar" 
-                                  ? paymentSettings.paymentInstructionsAr 
+                                {language === "ar"
+                                  ? paymentSettings.paymentInstructionsAr
                                   : paymentSettings.paymentInstructionsEn}
                               </p>
                             </div>
                           )}
                         </div>
                       )}
-
-                      <div>
-                        <Label className="text-sm font-medium text-foreground mb-2 block">
-                          {t("subscription.upload-proof")}
-                        </Label>
-                        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover-elevate active-elevate-2 transition-all">
-                          <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setProofFile(e.target.files?.[0] || null)}
-                            className="hidden"
-                            id="proof-upload"
-                            required
-                            data-testid="input-proof-upload"
-                          />
-                          <Label
-                            htmlFor="proof-upload"
-                            className="cursor-pointer text-sm text-muted-foreground"
-                          >
-                            {proofFile
-                              ? proofFile.name
-                              : language === "ar"
-                                ? "اضغط لتحميل إثبات الدفع"
-                                : "Click to upload payment proof"}
-                          </Label>
-                        </div>
-                      </div>
 
                       <div className="flex gap-4">
                         <Button
@@ -480,8 +758,154 @@ export default function Subscribe() {
                 </Card>
               )}
 
-              {/* Step 3: Success */}
-              {step === 3 && (
+              {/* Step 3: Create Account (for non-authenticated users) */}
+              {step === 3 && !isAuthenticated && (
+                <Card data-testid="card-create-account">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">
+                      {language === "ar" ? "إنشاء حساب" : "Create Your Account"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      // Here you would typically create the account and submit payment
+                      // For now, just move to success
+                      setStep(4);
+                    }} className="space-y-4">
+                      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 p-4 rounded-lg mb-6">
+                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                          {language === "ar"
+                            ? "✨ قم بإنشاء حساب لإكمال عملية الاشتراك وتتبع حالة الدفع الخاصة بك"
+                            : "✨ Create an account to complete your subscription and track your payment status"}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">
+                            {language === "ar" ? "الاسم الأول" : "First Name"}
+                          </Label>
+                          <Input
+                            name="firstName"
+                            placeholder={language === "ar" ? "أحمد" : "John"}
+                            required
+                            data-testid="input-first-name"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">
+                            {language === "ar" ? "الاسم الأخير" : "Last Name"}
+                          </Label>
+                          <Input
+                            name="lastName"
+                            placeholder={language === "ar" ? "محمد" : "Doe"}
+                            required
+                            data-testid="input-last-name"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">
+                          {language === "ar" ? "البريد الإلكتروني" : "Email"}
+                        </Label>
+                        <Input
+                          name="email"
+                          type="email"
+                          placeholder={language === "ar" ? "your@email.com" : "your@email.com"}
+                          required
+                          data-testid="input-email"
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">
+                          {language === "ar" ? "رقم الهاتف" : "Phone Number"}
+                        </Label>
+                        <Input
+                          name="phone"
+                          placeholder={language === "ar" ? "+20 1234567890" : "+20 1234567890"}
+                          required
+                          data-testid="input-phone"
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">
+                          {language === "ar" ? "كلمة المرور" : "Password"}
+                        </Label>
+                        <Input
+                          name="password"
+                          type="password"
+                          placeholder={language === "ar" ? "كلمة مرور قوية" : "Strong password"}
+                          required
+                          minLength={6}
+                          data-testid="input-password"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {language === "ar" ? "على الأقل 6 أحرف" : "At least 6 characters"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">
+                          {language === "ar" ? "تأكيد كلمة المرور" : "Confirm Password"}
+                        </Label>
+                        <Input
+                          name="confirmPassword"
+                          type="password"
+                          placeholder={language === "ar" ? "أعد إدخال كلمة المرور" : "Re-enter password"}
+                          required
+                          minLength={6}
+                          data-testid="input-confirm-password"
+                        />
+                      </div>
+
+                      <div className="flex gap-4 pt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setStep(2)}
+                          className="flex-1"
+                          data-testid="button-back-to-payment"
+                        >
+                          {language === "ar" ? "رجوع" : "Back"}
+                        </Button>
+                        <Button
+                          type="submit"
+                          className="flex-1"
+                          data-testid="button-create-account"
+                        >
+                          {language === "ar" ? "إنشاء حساب وإنهاء" : "Create Account & Complete"}
+                        </Button>
+                      </div>
+
+                      <p className="text-xs text-center text-muted-foreground mt-4">
+                        {language === "ar" ? (
+                          <>
+                            لديك حساب بالفعل؟{" "}
+                            <a href="/auth" className="text-primary hover:underline">
+                              تسجيل الدخول
+                            </a>
+                          </>
+                        ) : (
+                          <>
+                            Already have an account?{" "}
+                            <a href="/auth" className="text-primary hover:underline">
+                              Login
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Step 4: Success (Step 3 for authenticated users) */}
+              {step === (isAuthenticated ? 3 : 4) && (
                 <Card data-testid="card-success">
                   <CardContent className="p-12 text-center">
                     <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -494,16 +918,26 @@ export default function Subscribe() {
                     </h2>
                     <p className="text-muted-foreground mb-8">
                       {language === "ar"
-                        ? "تم إرسال إثبات الدفع الخاص بك. سنقوم بمراجعته وإخطارك قريباً."
-                        : "Your payment proof has been submitted. We'll review it and notify you soon."}
+                        ? "تم إرسال معلومات الدفع الخاصة بك. سنقوم بمراجعتها وإخطارك قريباً."
+                        : "Your payment information has been submitted. We'll review it and notify you soon."}
                     </p>
-                    <Button asChild>
-                      <a href="/dashboard" data-testid="button-dashboard">
-                        {language === "ar"
-                          ? "العودة إلى لوحة التحكم"
-                          : "Go to Dashboard"}
-                      </a>
-                    </Button>
+                    {isAuthenticated ? (
+                      <Button asChild>
+                        <a href="/dashboard" data-testid="button-dashboard">
+                          {language === "ar"
+                            ? "العودة إلى لوحة التحكم"
+                            : "Go to Dashboard"}
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button asChild>
+                        <a href="/auth" data-testid="button-login">
+                          {language === "ar"
+                            ? "تسجيل الدخول"
+                            : "Login to Your Account"}
+                        </a>
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               )}

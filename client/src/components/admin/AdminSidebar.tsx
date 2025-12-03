@@ -54,13 +54,14 @@ export function AdminSidebar() {
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+
       toast({
         title: language === "ar" ? "تم تسجيل الخروج" : "Logged out",
         description: language === "ar" ? "تم تسجيل خروجك بنجاح" : "You have been logged out successfully",
       });
-      
+
       setTimeout(() => {
+        navigate("/");
         window.location.reload();
       }, 500);
     } catch (error) {
@@ -145,10 +146,10 @@ export function AdminSidebar() {
       return businessItems;
     }
     if (user?.role === "support") {
-      return businessItems.filter(item => 
-        item.path === "/admin/pricing" || 
-        item.path === "/admin/users" || 
-        item.path === "/admin/payments" || 
+      return businessItems.filter(item =>
+        item.path === "/admin/pricing" ||
+        item.path === "/admin/users" ||
+        item.path === "/admin/payments" ||
         item.path === "/admin/withdrawals"
       );
     }
@@ -205,7 +206,7 @@ export function AdminSidebar() {
           <a className="flex items-center gap-2 px-2 py-1 hover-elevate active-elevate-2 rounded-md transition-colors">
             <GraduationCap className="h-6 w-6 text-primary" />
             <div className="flex flex-col">
-              <span className="font-heading font-bold text-base">Leedacademya</span>
+              <span className="font-heading font-bold text-base">Leed Academy</span>
               <span className="text-xs text-muted-foreground">
                 {language === "ar" ? "لوحة الإدارة" : "Admin Panel"}
               </span>
@@ -229,7 +230,7 @@ export function AdminSidebar() {
               <Badge className={`${getRoleBadgeColor(user?.role)} flex items-center gap-1`} data-testid={`badge-user-role-${user?.role}`}>
                 {getRoleIcon(user?.role)}
                 <span className="text-xs capitalize">
-                  {language === "ar" 
+                  {language === "ar"
                     ? user?.role === "admin" ? "مسؤول" : user?.role === "manager" ? "مدير" : user?.role === "support" ? "دعم" : user?.role
                     : user?.role}
                 </span>
@@ -241,89 +242,89 @@ export function AdminSidebar() {
       <SidebarContent className="gap-4">
         {/* Overview Section */}
         {getOverviewItems().length > 0 && (
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-4">
-            {language === "ar" ? "نظرة عامة" : "Overview"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {getOverviewItems().map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === item.path}
-                    data-testid={`admin-link-${item.path.split("/").pop()}`}
-                  >
-                    <Link href={item.path}>
-                      <a className="flex items-center gap-3">
-                        <item.icon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{item.title}</span>
-                      </a>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-4">
+              {language === "ar" ? "نظرة عامة" : "Overview"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {getOverviewItems().map((item) => (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === item.path}
+                      data-testid={`admin-link-${item.path.split("/").pop()}`}
+                    >
+                      <Link href={item.path}>
+                        <a className="flex items-center gap-3">
+                          <item.icon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{item.title}</span>
+                        </a>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
 
         {/* Content Management Section */}
         {getContentItems().length > 0 && (
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-4">
-            {language === "ar" ? "إدارة المحتوى" : "Content"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {getContentItems().map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === item.path}
-                    data-testid={`admin-link-${item.path.split("/").pop()}`}
-                  >
-                    <Link href={item.path}>
-                      <a className="flex items-center gap-3">
-                        <item.icon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{item.title}</span>
-                      </a>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-4">
+              {language === "ar" ? "إدارة المحتوى" : "Content"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {getContentItems().map((item) => (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === item.path}
+                      data-testid={`admin-link-${item.path.split("/").pop()}`}
+                    >
+                      <Link href={item.path}>
+                        <a className="flex items-center gap-3">
+                          <item.icon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{item.title}</span>
+                        </a>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
 
         {/* Business Section */}
         {getBusinessItems().length > 0 && (
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-4">
-            {language === "ar" ? "الأعمال" : "Business"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {getBusinessItems().map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === item.path}
-                    data-testid={`admin-link-${item.path.split("/").pop()}`}
-                  >
-                    <Link href={item.path}>
-                      <a className="flex items-center gap-3">
-                        <item.icon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{item.title}</span>
-                      </a>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-4">
+              {language === "ar" ? "الأعمال" : "Business"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {getBusinessItems().map((item) => (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === item.path}
+                      data-testid={`admin-link-${item.path.split("/").pop()}`}
+                    >
+                      <Link href={item.path}>
+                        <a className="flex items-center gap-3">
+                          <item.icon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{item.title}</span>
+                        </a>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
 
         {/* System Section */}

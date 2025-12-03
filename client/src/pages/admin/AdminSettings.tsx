@@ -39,6 +39,18 @@ const paymentSettingsSchema = z.object({
   ethAddress: z.string().optional(),
   usdtAddress: z.string().optional(),
   usdtNetwork: z.string().optional(),
+  // Card Payment
+  cardProcessorName: z.string().optional(),
+  cardInstructionsEn: z.string().optional(),
+  cardInstructionsAr: z.string().optional(),
+  // Mobile Wallets
+  vodafoneCashNumber: z.string().optional(),
+  orangeMoneyNumber: z.string().optional(),
+  etisalatCashNumber: z.string().optional(),
+  wePayNumber: z.string().optional(),
+  instapayNumber: z.string().optional(),
+  mobileWalletInstructionsEn: z.string().optional(),
+  mobileWalletInstructionsAr: z.string().optional(),
   paymentInstructionsEn: z.string().optional(),
   paymentInstructionsAr: z.string().optional(),
 });
@@ -93,6 +105,16 @@ export default function AdminSettings() {
       ethAddress: "",
       usdtAddress: "",
       usdtNetwork: "TRC20",
+      cardProcessorName: "",
+      cardInstructionsEn: "",
+      cardInstructionsAr: "",
+      vodafoneCashNumber: "",
+      orangeMoneyNumber: "",
+      etisalatCashNumber: "",
+      wePayNumber: "",
+      instapayNumber: "",
+      mobileWalletInstructionsEn: "",
+      mobileWalletInstructionsAr: "",
       paymentInstructionsEn: "",
       paymentInstructionsAr: "",
     },
@@ -127,14 +149,14 @@ export default function AdminSettings() {
         body: JSON.stringify(data),
         credentials: "include",
       });
-      
+
       if (!res.ok) {
         // Store the response for error handling
         const error: any = new Error("Failed to save settings");
         error.response = res;
         throw error;
       }
-      
+
       const contentType = res.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         return res.json();
@@ -153,16 +175,16 @@ export default function AdminSettings() {
       if (error.response) {
         try {
           const errorData = await error.response.json();
-          
+
           // Handle Zod validation errors
           if (errorData.issues && Array.isArray(errorData.issues)) {
             let hasFieldErrors = false;
-            
+
             errorData.issues.forEach((issue: any) => {
               // Only handle simple, single-level field paths
               if (issue.path && issue.path.length === 1) {
                 const fieldName = issue.path[0] as keyof PaymentSettingsForm;
-                
+
                 // Verify field exists in form before setting error
                 if (fieldName in form.getValues()) {
                   form.setError(fieldName, {
@@ -173,12 +195,12 @@ export default function AdminSettings() {
                 }
               }
             });
-            
+
             if (hasFieldErrors) {
               toast({
                 title: language === "ar" ? "خطأ في التحقق" : "Validation Error",
-                description: language === "ar" 
-                  ? "يرجى التحقق من الحقول المميزة" 
+                description: language === "ar"
+                  ? "يرجى التحقق من الحقول المميزة"
                   : "Please check the highlighted fields",
                 variant: "destructive",
               });
@@ -189,7 +211,7 @@ export default function AdminSettings() {
           // Fall through to generic error
         }
       }
-      
+
       toast({
         title: language === "ar" ? "خطأ" : "Error",
         description: error.message || "Failed to save settings",
@@ -249,8 +271,8 @@ export default function AdminSettings() {
           {language === "ar" ? "إعدادات النظام" : "System Settings"}
         </h1>
         <p className="text-muted-foreground">
-          {language === "ar" 
-            ? "إدارة إعدادات المنصة والدفع والمجموعات الاجتماعية" 
+          {language === "ar"
+            ? "إدارة إعدادات المنصة والدفع والمجموعات الاجتماعية"
             : "Manage platform, payment, and social group settings"}
         </p>
       </div>
@@ -334,259 +356,473 @@ export default function AdminSettings() {
         <h2 className="text-2xl font-heading font-bold text-foreground mb-4">
           {language === "ar" ? "إعدادات الدفع" : "Payment Settings"}
         </h2>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Bank Information */}
-          <Card data-testid="card-bank-info">
-            <CardHeader>
-              <CardTitle>{language === "ar" ? "معلومات البنك" : "Bank Information"}</CardTitle>
-              <CardDescription>
-                {language === "ar"
-                  ? "أدخل تفاصيل حسابك البنكي للتحويلات البنكية"
-                  : "Enter your bank account details for bank transfers"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="bankName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{language === "ar" ? "اسم البنك" : "Bank Name"}</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-bank-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="accountHolderName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{language === "ar" ? "اسم صاحب الحساب" : "Account Holder Name"}</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-account-holder" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="accountNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{language === "ar" ? "رقم الحساب" : "Account Number"}</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-account-number" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="iban"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>IBAN</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-iban" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="swiftCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SWIFT/BIC Code</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-swift" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bankAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{language === "ar" ? "عنوان البنك" : "Bank Address"}</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-bank-address" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Cryptocurrency Wallets */}
-          <Card data-testid="card-crypto-wallets">
-            <CardHeader>
-              <CardTitle>{language === "ar" ? "محافظ العملات الرقمية" : "Cryptocurrency Wallets"}</CardTitle>
-              <CardDescription>
-                {language === "ar"
-                  ? "أدخل عناوين محافظك للمدفوعات بالعملات الرقمية"
-                  : "Enter your wallet addresses for cryptocurrency payments"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="btcAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bitcoin (BTC) Address</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="bc1..." data-testid="input-btc-address" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="ethAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ethereum (ETH) Address</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="0x..." data-testid="input-eth-address" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="usdtAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>USDT Address</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-usdt-address" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="usdtNetwork"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{language === "ar" ? "شبكة USDT" : "USDT Network"}</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+            {/* Bank Information */}
+            <Card data-testid="card-bank-info">
+              <CardHeader>
+                <CardTitle>{language === "ar" ? "معلومات البنك" : "Bank Information"}</CardTitle>
+                <CardDescription>
+                  {language === "ar"
+                    ? "أدخل تفاصيل حسابك البنكي للتحويلات البنكية"
+                    : "Enter your bank account details for bank transfers"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="bankName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{language === "ar" ? "اسم البنك" : "Bank Name"}</FormLabel>
                         <FormControl>
-                          <SelectTrigger data-testid="select-usdt-network">
-                            <SelectValue />
-                          </SelectTrigger>
+                          <Input {...field} data-testid="input-bank-name" />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="TRC20">TRC20 (Tron)</SelectItem>
-                          <SelectItem value="ERC20">ERC20 (Ethereum)</SelectItem>
-                          <SelectItem value="BEP20">BEP20 (BSC)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="accountHolderName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{language === "ar" ? "اسم صاحب الحساب" : "Account Holder Name"}</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-account-holder" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="accountNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{language === "ar" ? "رقم الحساب" : "Account Number"}</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-account-number" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="iban"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>IBAN</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-iban" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="swiftCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SWIFT/BIC Code</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-swift" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="bankAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{language === "ar" ? "عنوان البنك" : "Bank Address"}</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-bank-address" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cryptocurrency Wallets */}
+            <Card data-testid="card-crypto-wallets">
+              <CardHeader>
+                <CardTitle>{language === "ar" ? "المحافظ الرقمية" : "Digital Wallets"}</CardTitle>
+                <CardDescription>
+                  {language === "ar"
+                    ? "أدخل عناوين محافظك للمدفوعات الرقمية"
+                    : "Enter your wallet addresses for digital payments"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="btcAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bitcoin (BTC) Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="bc1..." data-testid="input-btc-address" />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Payment Instructions */}
-          <Card data-testid="card-payment-instructions">
-            <CardHeader>
-              <CardTitle>{language === "ar" ? "تعليمات الدفع" : "Payment Instructions"}</CardTitle>
-              <CardDescription>
-                {language === "ar"
-                  ? "أضف تعليمات مخصصة للمستخدمين حول كيفية إتمام الدفع"
-                  : "Add custom instructions for users on how to complete payment"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="paymentInstructionsEn"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Instructions (English)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        rows={4}
-                        placeholder="Enter payment instructions in English..."
-                        data-testid="textarea-instructions-en"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                <FormField
+                  control={form.control}
+                  name="ethAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ethereum (ETH) Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="0x..." data-testid="input-eth-address" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="usdtAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>USDT Address</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-usdt-address" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="usdtNetwork"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{language === "ar" ? "شبكة USDT" : "USDT Network"}</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-usdt-network">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="TRC20">TRC20 (Tron)</SelectItem>
+                            <SelectItem value="ERC20">ERC20 (Ethereum)</SelectItem>
+                            <SelectItem value="BEP20">BEP20 (BSC)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card Payment Settings */}
+            <Card data-testid="card-card-payment">
+              <CardHeader>
+                <CardTitle>{language === "ar" ? "إعدادات الدفع بالبطاقة" : "Card Payment Settings"}</CardTitle>
+                <CardDescription>
+                  {language === "ar"
+                    ? "أدخل معلومات معالج الدفع بالبطاقة (Visa/Mastercard)"
+                    : "Enter card payment processor information (Visa/Mastercard)"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="cardProcessorName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{language === "ar" ? "اسم معالج الدفع" : "Payment Processor Name"}</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="e.g., Stripe, PayPal, Fawry, Paymob" 
+                          data-testid="input-card-processor" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cardInstructionsEn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Card Payment Instructions (English)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={3}
+                          placeholder="Enter instructions for card payment in English..."
+                          data-testid="textarea-card-instructions-en"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cardInstructionsAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Card Payment Instructions (Arabic)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={3}
+                          placeholder="أدخل تعليمات الدفع بالبطاقة بالعربية..."
+                          data-testid="textarea-card-instructions-ar"
+                          dir="rtl"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Mobile Wallet Settings */}
+            <Card data-testid="card-mobile-wallets">
+              <CardHeader>
+                <CardTitle>{language === "ar" ? "محافظ الموبايل المصرية" : "Egyptian Mobile Wallets"}</CardTitle>
+                <CardDescription>
+                  {language === "ar"
+                    ? "أدخل أرقام محافظ الموبايل المصرية (فودافون كاش، أورنج، إلخ)"
+                    : "Enter Egyptian mobile wallet numbers (Vodafone Cash, Orange, etc.)"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="vodafoneCashNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vodafone Cash</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="01xxxxxxxxx" 
+                            data-testid="input-vodafone-cash" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="orangeMoneyNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Orange Money</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="01xxxxxxxxx" 
+                            data-testid="input-orange-money" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="etisalatCashNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Etisalat Cash</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="01xxxxxxxxx" 
+                            data-testid="input-etisalat-cash" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="wePayNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>WE Pay</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="01xxxxxxxxx" 
+                            data-testid="input-we-pay" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="instapayNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>InstaPay</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="InstaPay username or number" 
+                          data-testid="input-instapay" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="mobileWalletInstructionsEn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobile Wallet Instructions (English)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={3}
+                          placeholder="Enter instructions for mobile wallet payment in English..."
+                          data-testid="textarea-wallet-instructions-en"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="mobileWalletInstructionsAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobile Wallet Instructions (Arabic)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={3}
+                          placeholder="أدخل تعليمات الدفع عبر المحفظة الإلكترونية بالعربية..."
+                          data-testid="textarea-wallet-instructions-ar"
+                          dir="rtl"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Payment Instructions */}
+            <Card data-testid="card-payment-instructions">
+              <CardHeader>
+                <CardTitle>{language === "ar" ? "تعليمات الدفع" : "Payment Instructions"}</CardTitle>
+                <CardDescription>
+                  {language === "ar"
+                    ? "أضف تعليمات مخصصة للمستخدمين حول كيفية إتمام الدفع"
+                    : "Add custom instructions for users on how to complete payment"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="paymentInstructionsEn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instructions (English)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={4}
+                          placeholder="Enter payment instructions in English..."
+                          data-testid="textarea-instructions-en"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="paymentInstructionsAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instructions (Arabic)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={4}
+                          placeholder="أدخل تعليمات الدفع بالعربية..."
+                          data-testid="textarea-instructions-ar"
+                          dir="rtl"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending || settingsLoading}
+                className="min-w-32"
+                data-testid="button-save-settings"
+              >
+                {updateMutation.isPending ? (
+                  language === "ar" ? "جاري الحفظ..." : "Saving..."
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    {language === "ar" ? "حفظ الإعدادات" : "Save Settings"}
+                  </>
                 )}
-              />
-
-              <FormField
-                control={form.control}
-                name="paymentInstructionsAr"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Instructions (Arabic)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        rows={4}
-                        placeholder="أدخل تعليمات الدفع بالعربية..."
-                        data-testid="textarea-instructions-ar"
-                        dir="rtl"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={updateMutation.isPending || settingsLoading}
-              className="min-w-32"
-              data-testid="button-save-settings"
-            >
-              {updateMutation.isPending ? (
-                language === "ar" ? "جاري الحفظ..." : "Saving..."
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  {language === "ar" ? "حفظ الإعدادات" : "Save Settings"}
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </Form>
+              </Button>
+            </div>
+          </form>
+        </Form>
       </div>
     </div>
   );

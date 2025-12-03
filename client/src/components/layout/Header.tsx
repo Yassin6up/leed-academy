@@ -46,13 +46,14 @@ export function Header() {
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+
       toast({
         title: language === "ar" ? "تم تسجيل الخروج" : "Logged out",
         description: language === "ar" ? "تم تسجيل خروجك بنجاح" : "You have been logged out successfully",
       });
-      
+
       setTimeout(() => {
+        navigate("/");
         window.location.reload();
       }, 500);
     } catch (error) {
@@ -81,25 +82,24 @@ export function Header() {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link 
+          <Link
             href="/"
             className="text-2xl font-heading font-bold text-primary hover-elevate active-elevate-2 px-3 py-2 rounded-lg transition-colors"
             data-testid="link-home-logo"
           >
-            Leedacademya
+            Leed Academy
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
             {navItems.map((item) => (
-              <Link 
-                key={item.path} 
+              <Link
+                key={item.path}
                 href={item.path}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${
-                  isActive(item.path)
+                className={`px-4 py-2 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${isActive(item.path)
                     ? "text-foreground bg-accent"
                     : "text-muted-foreground"
-                }`}
+                  }`}
                 data-testid={`link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
               >
                 {item.label}
@@ -181,7 +181,7 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={handleLogout}
                     data-testid="button-logout"
                   >
@@ -217,14 +217,13 @@ export function Header() {
           <nav className="lg:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-2">
               {navItems.map((item) => (
-                <Link 
-                  key={item.path} 
+                <Link
+                  key={item.path}
                   href={item.path}
-                  className={`block px-4 py-3 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${
-                    isActive(item.path)
+                  className={`block px-4 py-3 rounded-lg font-medium transition-colors hover-elevate active-elevate-2 ${isActive(item.path)
                       ? "text-foreground bg-accent"
                       : "text-muted-foreground"
-                  }`}
+                    }`}
                   onClick={() => setMobileMenuOpen(false)}
                   data-testid={`mobile-link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
                 >

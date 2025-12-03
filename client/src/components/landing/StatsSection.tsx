@@ -1,20 +1,42 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/lib/i18n"; // Using your custom hook
 
 gsap.registerPlugin(ScrollTrigger);
 
 export function StatsSection() {
-  const { t } = useTranslation();
+  const { language } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const numbersRef = useRef<HTMLDivElement[]>([]);
 
+  // Translation content
+  const translations = {
+    en: {
+      stats: {
+        students: "Active Students",
+        hours: "Learning Hours", 
+        successRate: "Success Rate",
+        rating: "Student Rating"
+      }
+    },
+    ar: {
+      stats: {
+        students: "طالب نشط",
+        hours: "ساعة تعلم",
+        successRate: "معدل النجاح",
+        rating: "تقييم الطلاب"
+      }
+    }
+  };
+
+  const t = translations[language];
+
   const stats = [
-    { number: 5000, key: "students", decimals: 0 },
-    { number: 150, key: "hours", decimals: 0 },
-    { number: 98, key: "successRate", decimals: 0 },
-    { number: 4.9, key: "rating", decimals: 1 },
+    { number: 5000, key: "students", decimals: 0, suffix: "+" },
+    { number: 150, key: "hours", decimals: 0, suffix: "+" },
+    { number: 98, key: "successRate", decimals: 0, suffix: "%" },
+    { number: 4.9, key: "rating", decimals: 1, suffix: "/5" },
   ];
 
   useEffect(() => {
@@ -36,9 +58,16 @@ export function StatsSection() {
             },
             onUpdate: function () {
               if (el) {
-                el.textContent = target.decimals
+                const currentValue = target.decimals
                   ? this.targets()[0].value.toFixed(target.decimals)
                   : Math.round(this.targets()[0].value).toString();
+                
+                // For Arabic numbers, convert if needed
+                if (language === "ar") {
+                  el.textContent = currentValue;
+                } else {
+                  el.textContent = currentValue;
+                }
               }
             },
           }
@@ -47,31 +76,34 @@ export function StatsSection() {
     }, containerRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [language]); // Added language dependency
 
   return (
     <section
       ref={containerRef}
-      className="py-20 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10"
+      className="py-20 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-900"
       data-testid="section-stats"
+      dir={language === "ar" ? "rtl" : "ltr"}
     >
       <div className="container mx-auto px-6">
-        <div className="grid md:grid-cols-4 gap-8 text-center">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {stats.map((stat, index) => (
-            <div key={index} data-testid={`stat-${index}`}>
-              <div className="mb-3">
+            <div key={index} data-testid={`stat-${index}`} className="p-4">
+              <div className="mb-3 flex items-center justify-center gap-1">
                 <div
                   ref={(el) => {
                     if (el) numbersRef.current[index] = el;
                   }}
-                  className="text-5xl font-bold text-primary"
+                  className="text-4xl md:text-5xl font-bold text-blue-600 dark:text-blue-400"
                 >
                   0
                 </div>
-                <span className="text-primary text-3xl">+</span>
+                <span className="text-blue-600 dark:text-blue-400 text-2xl md:text-3xl">
+                  {stat.suffix}
+                </span>
               </div>
-              <p className="text-lg font-semibold text-foreground">
-                {t(`landing.stats.${stat.key}`)}
+              <p className="text-base md:text-lg font-semibold text-slate-700 dark:text-slate-300">
+                {t.stats[stat.key as keyof typeof t.stats]}
               </p>
             </div>
           ))}

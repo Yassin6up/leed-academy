@@ -21,7 +21,7 @@ export default function DashboardNew() {
   const [location, navigate] = useLocation();
   const { isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
-  
+
   const searchParams = new URLSearchParams(window.location.search);
   const urlTab = searchParams.get("tab") || "courses";
   const [activeTab, setActiveTab] = useState(urlTab);
@@ -40,7 +40,7 @@ export default function DashboardNew() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        window.location.href = "/auth";
       }, 500);
     }
   }, [isAuthenticated, isLoading, toast]);
@@ -62,12 +62,12 @@ export default function DashboardNew() {
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+
       toast({
         title: language === "ar" ? "تم تسجيل الخروج" : "Logged out",
         description: language === "ar" ? "تم تسجيل خروجك بنجاح" : "You have been logged out successfully",
       });
-      
+
       setTimeout(() => {
         window.location.reload();
       }, 500);

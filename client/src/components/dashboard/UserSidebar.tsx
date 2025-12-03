@@ -65,7 +65,7 @@ export function UserSidebar() {
           <a className="flex items-center gap-2 px-2 py-1 hover-elevate active-elevate-2 rounded-md transition-colors">
             <GraduationCap className="h-6 w-6 text-primary" />
             <div className="flex flex-col">
-              <span className="font-heading font-bold text-base">Leedacademya</span>
+              <span className="font-heading font-bold text-base">Leed Academy</span>
               <span className="text-xs text-muted-foreground">
                 {language === "ar" ? "لوحة التحكم" : "Dashboard"}
               </span>

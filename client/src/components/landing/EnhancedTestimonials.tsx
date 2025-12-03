@@ -15,7 +15,7 @@ const testimonialsData = [
     role: "Forex Trader",
     ar_role: "متداول فوركس",
     content:
-      "Leedacademya transformed my trading journey. The strategies taught here are practical and profitable.",
+      "Leed Academy transformed my trading journey. The strategies taught here are practical and profitable.",
     ar_content:
       "حولت أكاديمية ليد رحلتي في التداول. الاستراتيجيات المدرسة هنا عملية ومربحة.",
     rating: 5,
@@ -25,8 +25,8 @@ const testimonialsData = [
   {
     name: "Sarah Johnson",
     ar_name: "سارة جونسون",
-    role: "Crypto Investor",
-    ar_role: "مستثمر عملات رقمية",
+    role: "Digital Asset Investor",
+    ar_role: "مستثمر أصول رقمية",
     content:
       "Best investment in my trading education. The mentors are exceptional and supportive.",
     ar_content:
@@ -162,13 +162,12 @@ export function EnhancedTestimonials() {
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-4 w-4 ${
-                        i < Math.floor(testimonial.rating)
-                          ? "fill-yellow-400 text-yellow-400"
-                          : i < testimonial.rating
-                            ? "fill-yellow-400 text-yellow-400 opacity-50"
-                            : "text-muted-foreground"
-                      }`}
+                      className={`h-4 w-4 ${i < Math.floor(testimonial.rating)
+                        ? "fill-yellow-400 text-yellow-400"
+                        : i < testimonial.rating
+                          ? "fill-yellow-400 text-yellow-400 opacity-50"
+                          : "text-muted-foreground"
+                        }`}
                     />
                   ))}
                 </div>

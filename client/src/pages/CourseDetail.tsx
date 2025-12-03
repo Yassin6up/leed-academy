@@ -207,7 +207,7 @@ export default function CourseDetail() {
               </div>
               {!isAuthenticated ? (
                 <Button asChild data-testid="button-login">
-                  <a href="/api/login">{t("nav.login")}</a>
+                  <a href="/auth">{t("nav.login")}</a>
                 </Button>
               ) : (
                 <Button asChild data-testid="button-subscribe">
@@ -573,9 +573,8 @@ export default function CourseDetail() {
                     key={lesson.id}
                     onClick={() => isAccessible && setCurrentLessonIndex(index)}
                     disabled={!isAccessible}
-                    className={`w-full p-3 rounded-lg text-left transition-all hover-elevate active-elevate-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isCurrent ? "bg-primary/10 border-l-4 border-l-primary" : "bg-muted/30"
-                    }`}
+                    className={`w-full p-3 rounded-lg text-left transition-all hover-elevate active-elevate-2 disabled:opacity-50 disabled:cursor-not-allowed ${isCurrent ? "bg-primary/10 border-l-4 border-l-primary" : "bg-muted/30"
+                      }`}
                     data-testid={`button-select-lesson-${index}`}
                   >
                     <div className="flex items-start gap-3">

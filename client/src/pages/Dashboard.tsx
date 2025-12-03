@@ -27,7 +27,7 @@ export default function Dashboard() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        window.location.href = "/auth";
       }, 500);
     }
   }, [isAuthenticated, isLoading, toast]);
@@ -107,19 +107,19 @@ export default function Dashboard() {
 
   const getSubscriptionStatus = () => {
     if (!subscription) return "none";
-    
+
     const now = new Date();
     const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
-    
+
     if (subscription.status === "active" && endDate && now > endDate) {
       return "expired";
     }
-    
+
     return subscription.status;
   };
 
   const subscriptionStatus = getSubscriptionStatus();
-  
+
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "active":
@@ -207,7 +207,7 @@ export default function Dashboard() {
             <h2 className="text-2xl font-heading font-bold text-foreground mb-6">
               {t("subscription.title")}
             </h2>
-            
+
             {isLoadingSubscription ? (
               <Card>
                 <CardContent className="p-12">

@@ -70,9 +70,8 @@ export default function Pricing() {
               {plans?.map((plan, index) => (
                 <Card
                   key={plan.id}
-                  className={`hover-elevate active-elevate-2 transition-all ${
-                    plan.isPopular ? "border-primary border-2" : ""
-                  }`}
+                  className={`hover-elevate active-elevate-2 transition-all ${plan.isPopular ? "border-primary border-2" : ""
+                    }`}
                   data-testid={`card-pricing-plan-${index}`}
                 >
                   <CardHeader>
@@ -115,13 +114,9 @@ export default function Pricing() {
                       className="w-full"
                       variant={plan.isPopular ? "default" : "outline"}
                     >
-                      {isAuthenticated ? (
-                        <Link href={`/subscribe/${plan.id}`}>
-                          <a data-testid={`button-select-plan-${index}`}>{t("pricing.select")}</a>
-                        </Link>
-                      ) : (
-                        <a href="/api/login" data-testid={`button-select-plan-${index}`}>{t("nav.login")}</a>
-                      )}
+                      <Link href={`/subscribe/${plan.id}`}>
+                        <a data-testid={`button-select-plan-${index}`}>{t("pricing.select")}</a>
+                      </Link>
                     </Button>
                   </CardContent>
                 </Card>

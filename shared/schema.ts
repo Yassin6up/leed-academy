@@ -41,6 +41,8 @@ export const users = pgTable("users", {
   referredBy: varchar("referred_by", { length: 8 }),
   referralCount: integer("referral_count").default(0),
   referralEarnings: decimal("referral_earnings", { precision: 10, scale: 2 }).default("0"),
+  isVerified: boolean("is_verified").default(false),
+  verificationToken: varchar("verification_token"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -358,6 +360,18 @@ export const paymentSettings = pgTable("payment_settings", {
   ethAddress: varchar("eth_address"),
   usdtAddress: varchar("usdt_address"),
   usdtNetwork: varchar("usdt_network").default("TRC20"),
+  // Card Payment Info
+  cardProcessorName: varchar("card_processor_name"), // e.g., "Stripe", "PayPal", "Fawry"
+  cardInstructionsEn: text("card_instructions_en"),
+  cardInstructionsAr: text("card_instructions_ar"),
+  // Egyptian Mobile Wallets
+  vodafoneCashNumber: varchar("vodafone_cash_number"),
+  orangeMoneyNumber: varchar("orange_money_number"),
+  etisalatCashNumber: varchar("etisalat_cash_number"),
+  wePayNumber: varchar("we_pay_number"),
+  instapayNumber: varchar("instapay_number"),
+  mobileWalletInstructionsEn: text("mobile_wallet_instructions_en"),
+  mobileWalletInstructionsAr: text("mobile_wallet_instructions_ar"),
   paymentInstructionsEn: text("payment_instructions_en"),
   paymentInstructionsAr: text("payment_instructions_ar"),
   updatedAt: timestamp("updated_at").defaultNow(),

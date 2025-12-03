@@ -171,8 +171,8 @@ export default function ReferralTab() {
             </div>
             <p className="text-sm text-muted-foreground mt-3">
               {language === "ar"
-                ? "شارك هذا الكود مع أصدقائك. عندما يسجلون باستخدام هذا الكود ويشترون خطة، تحصل على $10"
-                : "Share this code with your friends. When they sign up using this code and purchase a plan, you earn $10"}
+                ? "شارك هذا الكود مع أصدقائك. عندما يسجلون باستخدام هذا الكود ويشترون خطة، تحصل على 10% من اول شراء"
+                : "Share this code with your friends. When they sign up using this code and purchase a plan, you earn 10% of their first purchase"}
             </p>
           </div>
         </CardContent>
@@ -218,7 +218,7 @@ export default function ReferralTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">$10</div>
+            <div className="text-3xl font-bold">10%</div>
             <p className="text-xs text-muted-foreground mt-1">
               {language === "ar" ? "عند الشراء الأول" : "On first purchase"}
             </p>

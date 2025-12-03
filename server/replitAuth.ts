@@ -13,7 +13,7 @@ export function getSession() {
     tableName: "sessions",
   });
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret:"this is super secret",
     store: sessionStore,
     resave: false,
     saveUninitialized: false,

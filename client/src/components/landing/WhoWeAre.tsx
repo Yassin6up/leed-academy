@@ -3,16 +3,64 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Card } from "@/components/ui/card";
 import { Award, Users, Zap, Target } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/lib/i18n"; // Using your custom hook instead of react-i18next
 
 gsap.registerPlugin(ScrollTrigger);
 
-const valueIcons = [Award, Users, Zap, Target];
-
 export function WhoWeAre() {
-  const { t } = useTranslation();
+  const { language } = useLanguage();
   const sectionRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement[]>([]);
+
+  // Translation content
+  const translations = {
+    en: {
+      title: "Who We Are",
+      description: "A leading educational platform dedicated to empowering traders with professional financial market trading education and real-world market insights.",
+      values: {
+        excellence: {
+          title: "Excellence",
+          description: "Committed to delivering the highest quality educational content and support"
+        },
+        community: {
+          title: "Community",
+          description: "Building a supportive network of traders learning and growing together"
+        },
+        innovation: {
+          title: "Innovation",
+          description: "Continuously updating our methods with the latest market trends and technologies"
+        },
+        results: {
+          title: "Results",
+          description: "Focused on helping our students achieve tangible trading success"
+        }
+      }
+    },
+    ar: {
+      title: "من نحن",
+      description: "منصة تعليمية رائدة مخصصة لتمكين المتداولين بتعليم تداول الأسواق المالية المحترف ورؤى السوق الواقعية.",
+      values: {
+        excellence: {
+          title: "التميز",
+          description: "ملتزمون بتقديم أعلى جودة من المحتوى التعليمي والدعم"
+        },
+        community: {
+          title: "المجتمع",
+          description: "بناء شبكة داعمة من المتداولين الذين يتعلمون وينمون معًا"
+        },
+        innovation: {
+          title: "الابتكار",
+          description: "تحديث أساليبنا باستمرار بأحدث اتجاهات السوق والتقنيات"
+        },
+        results: {
+          title: "النتائج",
+          description: "تركز على مساعدة طلابنا في تحقيق نجاح تداول ملموس"
+        }
+      }
+    }
+  };
+
+  const t = translations[language];
 
   const values = [
     {
@@ -73,20 +121,27 @@ export function WhoWeAre() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-20 bg-background" data-testid="section-who-we-are">
+    <section
+      ref={sectionRef}
+      className="py-20 bg-white dark:bg-slate-900"
+      data-testid="section-who-we-are"
+      dir={language === "ar" ? "rtl" : "ltr"}
+    >
       <div className="container mx-auto px-6">
         <div className="max-w-3xl mx-auto mb-16 text-center">
-          <h2 className="who-we-are-title text-4xl md:text-5xl font-bold mb-6">
-            {t("landing.whoWeAre")}
+          <h2 className="who-we-are-title text-4xl md:text-5xl font-bold mb-6 text-slate-900 dark:text-white">
+            {t.title}
           </h2>
-          <p className="text-lg text-muted-foreground">
-            {t("landing.description")}
+          <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+            {t.description}
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {values.map((value, index) => {
             const Icon = value.icon;
+            const valueData = t.values[value.key as keyof typeof t.values];
+
             return (
               <div
                 key={index}
@@ -94,11 +149,18 @@ export function WhoWeAre() {
                   if (el) cardsRef.current[index] = el;
                 }}
               >
-                <Card className="p-6 h-full hover-elevate text-center" data-testid={`value-card-${index}`}>
-                  <Icon className="h-12 w-12 mx-auto mb-4 text-primary" />
-                  <h3 className="text-xl font-bold mb-4">{t(`landing.values.${value.key}`)}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t(`landing.values.${value.key}Desc`)}
+                <Card
+                  className="p-6 h-full hover:shadow-lg transition-all duration-300 border border-slate-200 dark:border-slate-700 text-center hover:scale-105"
+                  data-testid={`value-card-${index}`}
+                >
+                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Icon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">
+                    {valueData.title}
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                    {valueData.description}
                   </p>
                 </Card>
               </div>

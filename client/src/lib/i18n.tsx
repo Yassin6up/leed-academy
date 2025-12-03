@@ -23,27 +23,27 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "Logout",
     "nav.dashboard": "Dashboard",
     "nav.admin": "Admin Panel",
-    
+
     // Hero
-    "hero.title": "Master Cryptocurrency Trading",
+    "hero.title": "Master Professional Trading",
     "hero.subtitle": "Learn from industry experts and transform your trading journey with comprehensive courses and live market analysis",
     "hero.cta.primary": "Start Learning",
     "hero.cta.secondary": "Explore Courses",
-    
+
     // Features
-    "features.title": "Why Choose Leedacademya",
+    "features.title": "Why Choose Leed Academy",
     "features.expert.title": "Expert Instructors",
     "features.expert.desc": "Learn from certified professionals with years of trading experience",
     "features.live.title": "Live Market Data",
-    "features.live.desc": "Real-time cryptocurrency prices and market analysis",
+    "features.live.desc": "Real-time market prices and analysis",
     "features.progress.title": "Track Progress",
     "features.progress.desc": "Monitor your learning journey with detailed analytics",
     "features.support.title": "24/7 Support",
     "features.support.desc": "Get help whenever you need it from our dedicated team",
-    
+
     // Testimonials
     "testimonials.title": "What Our Students Say",
-    
+
     // Courses
     "courses.title": "Our Courses",
     "courses.level": "Level",
@@ -57,21 +57,21 @@ const translations: Record<Language, Record<string, string>> = {
     "courses.filter.all": "All Courses",
     "courses.filter.free": "Free",
     "courses.filter.level": "Level",
-    
+
     // Pricing
     "pricing.title": "Choose Your Plan",
     "pricing.monthly": "Monthly",
     "pricing.popular": "Most Popular",
     "pricing.select": "Select Plan",
     "pricing.features": "Features",
-    
+
     // Contact
     "contact.title": "Get In Touch",
     "contact.name": "Name",
     "contact.email": "Email",
     "contact.message": "Message",
     "contact.send": "Send Message",
-    
+
     // Dashboard
     "dashboard.welcome": "Welcome back",
     "dashboard.stats.enrolled": "Enrolled Courses",
@@ -80,12 +80,12 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.stats.progress": "Overall Progress",
     "dashboard.my-courses": "My Courses",
     "dashboard.continue-learning": "Continue Learning",
-    
+
     // Subscription
     "subscription.choose-plan": "Choose a Plan",
     "subscription.payment-method": "Payment Method",
     "subscription.upload-proof": "Upload Proof",
-    "subscription.crypto": "Cryptocurrency",
+    "subscription.crypto": "Digital Payment",
     "subscription.bank": "Bank Transfer",
     "subscription.submit": "Submit Payment",
     "subscription.pending": "Payment Pending",
@@ -104,7 +104,7 @@ const translations: Record<Language, Record<string, string>> = {
     "subscription.no-subscription": "No Active Subscription",
     "subscription.no-subscription-desc": "You don't have an active subscription yet. Choose a plan to unlock premium courses and features.",
     "subscription.view-plans": "View Plans",
-    
+
     // Admin
     "admin.dashboard": "Dashboard",
     "admin.users": "Users",
@@ -117,7 +117,7 @@ const translations: Record<Language, Record<string, string>> = {
     "admin.create-lesson": "Create Lesson",
     "admin.approve": "Approve",
     "admin.reject": "Reject",
-    
+
     // Common
     "common.save": "Save",
     "common.cancel": "Cancel",
@@ -139,27 +139,27 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "تسجيل الخروج",
     "nav.dashboard": "لوحة التحكم",
     "nav.admin": "لوحة الإدارة",
-    
+
     // Hero
-    "hero.title": "احترف تداول العملات الرقمية",
+    "hero.title": "احترف التداول المهني",
     "hero.subtitle": "تعلم من خبراء الصناعة وحول رحلة التداول الخاصة بك مع دورات شاملة وتحليل مباشر للسوق",
     "hero.cta.primary": "ابدأ التعلم",
     "hero.cta.secondary": "استكشف الدورات",
-    
+
     // Features
-    "features.title": "لماذا تختار Leedacademya",
+    "features.title": "لماذا تختار Leed Academy",
     "features.expert.title": "مدربون خبراء",
     "features.expert.desc": "تعلم من محترفين معتمدين بسنوات من الخبرة في التداول",
     "features.live.title": "بيانات السوق المباشرة",
-    "features.live.desc": "أسعار العملات الرقمية في الوقت الفعلي وتحليل السوق",
+    "features.live.desc": "أسعار السوق في الوقت الفعلي والتحليل",
     "features.progress.title": "تتبع التقدم",
     "features.progress.desc": "راقب رحلة التعلم الخاصة بك بتحليلات مفصلة",
     "features.support.title": "دعم على مدار الساعة",
     "features.support.desc": "احصل على المساعدة متى احتجتها من فريقنا المخصص",
-    
+
     // Testimonials
     "testimonials.title": "ماذا يقول طلابنا",
-    
+
     // Courses
     "courses.title": "دوراتنا",
     "courses.level": "المستوى",
@@ -173,21 +173,21 @@ const translations: Record<Language, Record<string, string>> = {
     "courses.filter.all": "جميع الدورات",
     "courses.filter.free": "مجاني",
     "courses.filter.level": "المستوى",
-    
+
     // Pricing
     "pricing.title": "اختر خطتك",
     "pricing.monthly": "شهري",
     "pricing.popular": "الأكثر شعبية",
     "pricing.select": "اختر الخطة",
     "pricing.features": "المميزات",
-    
+
     // Contact
     "contact.title": "تواصل معنا",
     "contact.name": "الاسم",
     "contact.email": "البريد الإلكتروني",
     "contact.message": "الرسالة",
     "contact.send": "إرسال الرسالة",
-    
+
     // Dashboard
     "dashboard.welcome": "مرحباً بعودتك",
     "dashboard.stats.enrolled": "الدورات المسجلة",
@@ -196,12 +196,12 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.stats.progress": "التقدم الإجمالي",
     "dashboard.my-courses": "دوراتي",
     "dashboard.continue-learning": "متابعة التعلم",
-    
+
     // Subscription
     "subscription.choose-plan": "اختر خطة",
     "subscription.payment-method": "طريقة الدفع",
     "subscription.upload-proof": "تحميل الإثبات",
-    "subscription.crypto": "العملات الرقمية",
+    "subscription.crypto": "دفع رقمي",
     "subscription.bank": "تحويل بنكي",
     "subscription.submit": "إرسال الدفع",
     "subscription.pending": "الدفع قيد الانتظار",
@@ -220,7 +220,7 @@ const translations: Record<Language, Record<string, string>> = {
     "subscription.no-subscription": "لا يوجد اشتراك نشط",
     "subscription.no-subscription-desc": "ليس لديك اشتراك نشط حتى الآن. اختر خطة لفتح الدورات والميزات المميزة.",
     "subscription.view-plans": "عرض الخطط",
-    
+
     // Admin
     "admin.dashboard": "لوحة التحكم",
     "admin.users": "المستخدمون",
@@ -233,7 +233,7 @@ const translations: Record<Language, Record<string, string>> = {
     "admin.create-lesson": "إنشاء درس",
     "admin.approve": "قبول",
     "admin.reject": "رفض",
-    
+
     // Common
     "common.save": "حفظ",
     "common.cancel": "إلغاء",
@@ -255,7 +255,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("language", language);
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
-    
+
     // Set language class on body for font styling
     if (language === "ar") {
       document.body.classList.add("lang-ar");

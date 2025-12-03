@@ -41,23 +41,45 @@ export default function Contact() {
     },
   });
 
-  const onSubmit = (data: ContactFormData) => {
-    console.log("Contact form:", data);
-    toast({
-      title: t("common.success"),
-      description:
-        language === "ar"
-          ? "تم إرسال رسالتك بنجاح!"
-          : "Your message has been sent successfully!",
-    });
-    form.reset();
+  const onSubmit = async (data: ContactFormData) => {
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to send message");
+      }
+
+      toast({
+        title: t("common.success"),
+        description:
+          language === "ar"
+            ? "تم إرسال رسالتك بنجاح! سنقوم بالرد عليك قريباً."
+            : "Your message has been sent successfully! We'll get back to you soon.",
+      });
+      form.reset();
+    } catch (error: any) {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.message || (language === "ar"
+          ? "فشل إرسال الرسالة. يرجى المحاولة مرة أخرى."
+          : "Failed to send message. Please try again."),
+        variant: "destructive",
+      });
+    }
   };
 
   const contactInfo = [
     {
       icon: Mail,
       title: language === "ar" ? "البريد الإلكتروني" : "Email",
-      value: "info@leedacademya.com",
+      value: "contact@leedacademya.com",
     },
     {
       icon: Phone,
@@ -67,7 +89,7 @@ export default function Contact() {
     {
       icon: MapPin,
       title: language === "ar" ? "الموقع" : "Location",
-      value: language === "ar" ? "دبي، الإمارات العربية المتحدة" : "Dubai, UAE",
+      value: language === "ar" ? "عمان مسقط ولاية السيب على يمين ستاد السيب فيلا رقم ٣" : "Misk, Oman",
     },
   ];
 

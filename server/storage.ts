@@ -1,10 +1,10 @@
 import { db } from "./db";
-import { 
-  users, 
-  courses, 
-  lessons, 
+import {
+  users,
+  courses,
+  lessons,
   courseResources,
-  subscriptionPlans, 
+  subscriptionPlans,
   subscriptions,
   payments,
   progress,
@@ -53,7 +53,17 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByReferralCode(code: string): Promise<User | undefined>;
-  createUser(userData: { email: string; password: string; firstName: string; lastName: string; phone?: string; referredBy?: string }): Promise<User>;
+  getUserByVerificationToken(token: string): Promise<User | undefined>;
+  createUser(userData: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    referredBy?: string;
+    isVerified?: boolean;
+    verificationToken?: string;
+  }): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
@@ -65,51 +75,51 @@ export interface IStorage {
   activateUser(userId: string): Promise<User>;
   deleteUser(userId: string): Promise<void>;
   cancelUserSubscription(userId: string): Promise<User>;
-  
+
   // Course methods
   getCourse(id: string): Promise<Course | undefined>;
   getAllCourses(): Promise<Course[]>;
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: string, data: Partial<Course>): Promise<Course>;
   deleteCourse(id: string): Promise<void>;
-  
+
   // Lesson methods
   getLesson(id: string): Promise<Lesson | undefined>;
   getLessonsByCourse(courseId: string): Promise<Lesson[]>;
   createLesson(lesson: InsertLesson): Promise<Lesson>;
   updateLesson(id: string, data: Partial<Lesson>): Promise<Lesson>;
   deleteLesson(id: string): Promise<void>;
-  
+
   // Course Resources methods
   getCourseResource(id: string): Promise<CourseResource | undefined>;
   getCourseResources(courseId: string): Promise<CourseResource[]>;
   createCourseResource(resource: InsertCourseResource): Promise<CourseResource>;
   updateCourseResource(id: string, data: Partial<CourseResource>): Promise<CourseResource>;
   deleteCourseResource(id: string): Promise<void>;
-  
+
   // Subscription Plan methods
   getSubscriptionPlan(id: string): Promise<SubscriptionPlan | undefined>;
   getAllSubscriptionPlans(): Promise<SubscriptionPlan[]>;
   createSubscriptionPlan(plan: InsertSubscriptionPlan): Promise<SubscriptionPlan>;
   updateSubscriptionPlan(id: string, data: Partial<SubscriptionPlan>): Promise<SubscriptionPlan>;
-  
+
   // Subscription methods
   getUserSubscription(userId: string): Promise<Subscription | undefined>;
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   updateSubscription(id: string, data: Partial<Subscription>): Promise<Subscription>;
-  
+
   // Payment methods
   getPayment(id: string): Promise<Payment | undefined>;
   getAllPayments(): Promise<Payment[]>;
   getUserPayments(userId: string): Promise<Payment[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePayment(id: string, data: Partial<Payment>): Promise<Payment>;
-  
+
   // Progress methods
   getUserProgress(userId: string): Promise<Progress[]>;
   getCourseProgress(userId: string, courseId: string): Promise<Progress[]>;
   upsertProgress(progressData: InsertProgress): Promise<Progress>;
-  
+
   // Meeting methods
   getMeeting(id: string): Promise<Meeting | undefined>;
   getCourseMeetings(courseId: string): Promise<Meeting[]>;
@@ -117,19 +127,19 @@ export interface IStorage {
   createMeeting(meeting: InsertMeeting): Promise<Meeting>;
   updateMeeting(id: string, data: Partial<Meeting>): Promise<Meeting>;
   deleteMeeting(id: string): Promise<void>;
-  
+
   // Testimonial methods
   getAllTestimonials(): Promise<Testimonial[]>;
   createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial>;
-  
+
   // Stats methods
   getStats(): Promise<{ userCount: number; courseCount: number; satisfactionRate: number }>;
-  
+
   // Analytics methods
   getAnalytics(): Promise<{
-    revenueTrends: { 
-      daily: Array<{ date: string; amount: number }>; 
-      weekly: Array<{ week: string; amount: number }>; 
+    revenueTrends: {
+      daily: Array<{ date: string; amount: number }>;
+      weekly: Array<{ week: string; amount: number }>;
       monthly: Array<{ month: string; amount: number }>;
     };
     userRegistrationTrends: Array<{ month: string; count: number }>;
@@ -137,11 +147,11 @@ export interface IStorage {
     topCourses: Array<{ id: string; titleEn: string; titleAr: string; enrollments: number }>;
     paymentStatusBreakdown: { pending: number; approved: number; rejected: number };
   }>;
-  
+
   // Payment Settings methods
   getPaymentSettings(): Promise<PaymentSettings | undefined>;
   upsertPaymentSettings(settings: InsertPaymentSettings): Promise<PaymentSettings>;
-  
+
   // Settings methods
   getSetting(key: string): Promise<Setting | undefined>;
   getAllSettings(): Promise<Setting[]>;
@@ -178,10 +188,24 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createUser(userData: { email: string; password: string; firstName: string; lastName: string; phone?: string; referredBy?: string }): Promise<User> {
+  async getUserByVerificationToken(token: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.verificationToken, token)).limit(1);
+    return result[0];
+  }
+
+  async createUser(userData: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    referredBy?: string;
+    isVerified?: boolean;
+    verificationToken?: string;
+  }): Promise<User> {
     // Hash the password
     const passwordHash = await bcrypt.hash(userData.password, 10);
-    
+
     // Generate unique referral code
     let referralCode = this.generateReferralCode();
     let isUnique = false;
@@ -203,6 +227,8 @@ export class DatabaseStorage implements IStorage {
       phone: userData.phone,
       referralCode,
       referredBy: userData.referredBy || null,
+      isVerified: userData.isVerified ?? false,
+      verificationToken: userData.verificationToken || null,
     }).returning();
 
     return newUser;
@@ -227,7 +253,7 @@ export class DatabaseStorage implements IStorage {
 
   async upsertUser(user: UpsertUser): Promise<User> {
     const existing = user.email ? await this.getUserByEmail(user.email) : null;
-    
+
     if (existing) {
       const [updated] = await db
         .update(users)
@@ -236,7 +262,7 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return updated;
     }
-    
+
     const [newUser] = await db.insert(users).values(user).returning();
     return newUser;
   }
@@ -257,7 +283,7 @@ export class DatabaseStorage implements IStorage {
   async getReferralCount(userId: string): Promise<number> {
     const user = await this.getUser(userId);
     if (!user?.referralCode) return 0;
-    
+
     const referrals = await db
       .select()
       .from(users)
@@ -335,14 +361,14 @@ export class DatabaseStorage implements IStorage {
       .from(subscriptions)
       .where(eq(subscriptions.userId, userId))
       .limit(1);
-    
+
     if (subscription.length > 0) {
       await db
         .update(subscriptions)
         .set({ status: 'cancelled' })
         .where(eq(subscriptions.userId, userId));
     }
-    
+
     const [updated] = await db
       .update(users)
       .set({ subscriptionStatus: 'cancelled', updatedAt: new Date() })
@@ -627,48 +653,48 @@ export class DatabaseStorage implements IStorage {
     const [newTestimonial] = await db.insert(testimonials).values(testimonial).returning();
     return newTestimonial;
   }
-  
+
   // Stats methods
   async getStats(): Promise<{ userCount: number; courseCount: number; satisfactionRate: number }> {
     const { sql } = await import("drizzle-orm");
-    
+
     const [{ userCount }] = await db
       .select({ userCount: sql<number>`cast(count(*) as integer)` })
       .from(users);
-    
+
     const [{ courseCount }] = await db
       .select({ courseCount: sql<number>`cast(count(*) as integer)` })
       .from(courses);
-    
+
     const [{ testimonialCount, totalRating }] = await db
       .select({
         testimonialCount: sql<number>`cast(count(*) as integer)`,
         totalRating: sql<number>`cast(coalesce(sum(${testimonials.rating}), 0) as integer)`,
       })
       .from(testimonials);
-    
+
     let satisfactionRate = 0;
     if (testimonialCount > 0 && totalRating > 0) {
       satisfactionRate = Math.round((totalRating / (testimonialCount * 5)) * 100);
     }
-    
+
     return {
       userCount,
       courseCount,
       satisfactionRate,
     };
   }
-  
+
   // Analytics methods
   async getAnalytics() {
     const allPayments = await db.select().from(payments);
     const allUsers = await db.select().from(users);
     const allSubscriptions = await db.select().from(subscriptions);
     const allCourses = await db.select().from(courses);
-    
+
     const now = new Date();
     const approvedPayments = allPayments.filter(p => p.status === "approved" && p.createdAt);
-    
+
     // Daily revenue (last 30 days) - backfill all days
     const dailyRevenue = new Map<string, number>();
     for (let i = 0; i < 30; i++) {
@@ -676,7 +702,7 @@ export class DatabaseStorage implements IStorage {
       const dateStr = date.toISOString().split('T')[0];
       dailyRevenue.set(dateStr, 0);
     }
-    
+
     approvedPayments.forEach(p => {
       const paymentDate = new Date(p.createdAt!);
       const daysDiff = Math.floor((now.getTime() - paymentDate.getTime()) / (24 * 60 * 60 * 1000));
@@ -685,11 +711,11 @@ export class DatabaseStorage implements IStorage {
         dailyRevenue.set(dateStr, (dailyRevenue.get(dateStr) || 0) + parseFloat(p.amount));
       }
     });
-    
+
     const daily = Array.from(dailyRevenue.entries())
       .map(([date, amount]) => ({ date, amount: Math.round(amount * 100) / 100 }))
       .sort((a, b) => a.date.localeCompare(b.date));
-    
+
     // ISO Week calculation helper
     const getISOWeek = (date: Date): string => {
       const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -699,7 +725,7 @@ export class DatabaseStorage implements IStorage {
       const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
       return `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
     };
-    
+
     // Weekly revenue (last 12 weeks) - backfill all weeks
     const weeklyRevenue = new Map<string, number>();
     for (let i = 0; i < 12; i++) {
@@ -707,18 +733,18 @@ export class DatabaseStorage implements IStorage {
       const weekKey = getISOWeek(date);
       weeklyRevenue.set(weekKey, 0);
     }
-    
+
     approvedPayments.forEach(p => {
       const weekKey = getISOWeek(new Date(p.createdAt!));
       if (weeklyRevenue.has(weekKey)) {
         weeklyRevenue.set(weekKey, (weeklyRevenue.get(weekKey) || 0) + parseFloat(p.amount));
       }
     });
-    
+
     const weekly = Array.from(weeklyRevenue.entries())
       .map(([week, amount]) => ({ week, amount: Math.round(amount * 100) / 100 }))
       .sort((a, b) => a.week.localeCompare(b.week));
-    
+
     // Monthly revenue (last 12 months) - backfill all months
     const monthlyRevenue = new Map<string, number>();
     for (let i = 0; i < 12; i++) {
@@ -726,7 +752,7 @@ export class DatabaseStorage implements IStorage {
       const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
       monthlyRevenue.set(monthKey, 0);
     }
-    
+
     approvedPayments.forEach(p => {
       const date = new Date(p.createdAt!);
       const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
@@ -734,11 +760,11 @@ export class DatabaseStorage implements IStorage {
         monthlyRevenue.set(monthKey, (monthlyRevenue.get(monthKey) || 0) + parseFloat(p.amount));
       }
     });
-    
+
     const monthly = Array.from(monthlyRevenue.entries())
       .map(([month, amount]) => ({ month, amount: Math.round(amount * 100) / 100 }))
       .sort((a, b) => a.month.localeCompare(b.month));
-    
+
     // User registration trends (last 12 months) - backfill all months
     const registrationTrends = new Map<string, number>();
     for (let i = 0; i < 12; i++) {
@@ -746,7 +772,7 @@ export class DatabaseStorage implements IStorage {
       const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
       registrationTrends.set(monthKey, 0);
     }
-    
+
     allUsers.forEach(u => {
       if (u.createdAt) {
         const date = new Date(u.createdAt);
@@ -756,18 +782,18 @@ export class DatabaseStorage implements IStorage {
         }
       }
     });
-    
+
     const userRegistrationTrends = Array.from(registrationTrends.entries())
       .map(([month, count]) => ({ month, count }))
       .sort((a, b) => a.month.localeCompare(b.month));
-    
+
     // Course enrollments - count all subscriptions (since we don't have courseId in subscriptions)
     const courseEnrollments = allCourses.map(course => ({
       courseId: course.id,
       courseName: course.titleEn,
       count: Math.floor(allSubscriptions.length / Math.max(allCourses.length, 1)),
     }));
-    
+
     // Top performing courses - distribute enrollments evenly across courses
     const enrollmentsPerCourse = Math.floor(allSubscriptions.length / Math.max(allCourses.length, 1));
     const topCourses = allCourses
@@ -779,14 +805,14 @@ export class DatabaseStorage implements IStorage {
       }))
       .sort((a, b) => b.enrollments - a.enrollments)
       .slice(0, 5);
-    
+
     // Payment status breakdown
     const paymentStatusBreakdown = {
       pending: allPayments.filter(p => p.status === "pending").length,
       approved: allPayments.filter(p => p.status === "approved").length,
       rejected: allPayments.filter(p => p.status === "rejected").length,
     };
-    
+
     return {
       revenueTrends: { daily, weekly, monthly },
       userRegistrationTrends,
@@ -795,16 +821,16 @@ export class DatabaseStorage implements IStorage {
       paymentStatusBreakdown,
     };
   }
-  
+
   // Payment Settings methods
   async getPaymentSettings(): Promise<PaymentSettings | undefined> {
     const result = await db.select().from(paymentSettings).limit(1);
     return result[0];
   }
-  
+
   async upsertPaymentSettings(settings: InsertPaymentSettings): Promise<PaymentSettings> {
     const existing = await this.getPaymentSettings();
-    
+
     if (existing) {
       const [updated] = await db
         .update(paymentSettings)
@@ -813,7 +839,7 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return updated;
     }
-    
+
     const [newSettings] = await db.insert(paymentSettings).values(settings).returning();
     return newSettings;
   }
@@ -830,7 +856,7 @@ export class DatabaseStorage implements IStorage {
 
   async upsertSetting(key: string, value: string): Promise<Setting> {
     const existing = await this.getSetting(key);
-    
+
     if (existing) {
       const [updated] = await db
         .update(settings)
@@ -839,7 +865,7 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return updated;
     }
-    
+
     const [newSetting] = await db.insert(settings).values({ key, value }).returning();
     return newSetting;
   }
@@ -881,7 +907,7 @@ export class DatabaseStorage implements IStorage {
     // Reset user's referral earnings to 0
     await db
       .update(users)
-      .set({ 
+      .set({
         referralEarnings: "0",
         updatedAt: new Date()
       })

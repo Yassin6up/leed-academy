@@ -1,8 +1,8 @@
-# Leedacademya - Application Documentation
+# Leed Academy - Application Documentation
 
 ## Overview
 
-Leedacademya is a comprehensive bilingual (English/Arabic) cryptocurrency trading education platform featuring:
+Leed Academy is a comprehensive bilingual (English/Arabic) cryptocurrency trading education platform featuring:
 - Multi-level course system (Level 1-3)
 - Subscription-based access control
 - Payment processing (crypto & bank transfer)

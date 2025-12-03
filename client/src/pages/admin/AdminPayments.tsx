@@ -128,7 +128,7 @@ export default function AdminPayments() {
               <SelectContent>
                 <SelectItem value="all">{language === "ar" ? "كل الطرق" : "All Methods"}</SelectItem>
                 <SelectItem value="bank_transfer">{language === "ar" ? "تحويل بنكي" : "Bank Transfer"}</SelectItem>
-                <SelectItem value="crypto">{language === "ar" ? "عملات رقمية" : "Crypto"}</SelectItem>
+                <SelectItem value="crypto">{language === "ar" ? "دفع رقمي" : "Digital Payment"}</SelectItem>
               </SelectContent>
             </Select>
             {(searchFilter) && (

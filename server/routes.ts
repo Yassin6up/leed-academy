@@ -26,6 +26,7 @@ import {
 import express from "express";
 import { HLSConverter } from "./hlsUtils";
 import crypto from "crypto";
+import { sendVerificationEmail, sendContactEmail } from "./email";
 
 // Simple slugify function
 function slugify(text: string): string {
@@ -43,7 +44,7 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-  
+
   const user = await storage.getUser(userId);
   if (!user || user.role !== "admin") {
     return res.status(403).json({ message: "Forbidden - Admin access required" });
@@ -85,7 +86,7 @@ async function logAdminAction(userId: string, action: string, page: string, desc
     const user = await storage.getUser(userId);
     const adminName = user ? `${user.firstName} ${user.lastName}` : "Unknown";
     const adminEmail = user?.email || "unknown@example.com";
-    
+
     console.log("📝 [ADMIN LOG] Recording action:", {
       adminId: userId,
       adminName,
@@ -96,7 +97,7 @@ async function logAdminAction(userId: string, action: string, page: string, desc
       details,
       timestamp: new Date().toISOString(),
     });
-    
+
     const log = await storage.createAdminLog({
       adminId: userId,
       adminName,
@@ -106,7 +107,7 @@ async function logAdminAction(userId: string, action: string, page: string, desc
       description,
       details,
     });
-    
+
     console.log("✅ [ADMIN LOG] Successfully saved:", log);
   } catch (error) {
     console.error("❌ [ADMIN LOG] Failed to log admin action:", error);
@@ -164,21 +165,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!registerData.success) {
-        return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: registerData.error.errors 
+        return res.status(400).json({
+          message: "Validation failed",
+          errors: registerData.error.errors
         });
       }
 
       const { email, password, firstName, lastName, phone, referredBy } = registerData.data;
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: "User already exists" });
       }
 
-      // Create user
+      // Create user with verification token
+      const verificationToken = randomUUID();
       const user = await storage.createUser({
         email,
         password,
@@ -186,28 +188,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName,
         phone,
         referredBy,
+        isVerified: false,
+        verificationToken,
       });
 
-      // Regenerate session to prevent session fixation
-      req.session.regenerate((err) => {
-        if (err) {
-          console.error("Session regeneration error:", err);
-          return res.status(500).json({ message: "Registration failed" });
-        }
+      // Send verification email
+      const emailSent = await sendVerificationEmail(email, verificationToken);
 
-        // Store user in session
-        (req.session as any).userId = user.id;
-        
-        res.json({ 
-          message: "Registration successful", 
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-          }
-        });
+      if (!emailSent) {
+        // Log error but don't fail registration? Or fail?
+        // For now, let's log it. In production, we might want to retry or fail.
+        console.error("Failed to send verification email to:", email);
+      }
+
+      res.json({
+        message: "Registration successful. Please check your email to verify your account.",
+        requireVerification: true
       });
     } catch (error) {
       console.error("Error during registration:", error);
@@ -224,11 +220,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required" });
       }
-      
+
       // Validate credentials
       const user = await storage.validateUserPassword(email, password);
       if (!user) {
         return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Check verification status
+      if (!user.isVerified) {
+        // Generate new verification token
+        const verificationToken = randomUUID();
+
+        // Update user with new token
+        await storage.updateUser(user.id, {
+          verificationToken,
+        });
+
+        // Resend verification email
+        const emailSent = await sendVerificationEmail(email, verificationToken);
+
+        if (!emailSent) {
+          console.error("Failed to resend verification email to:", email);
+        }
+
+        return res.status(403).json({
+          message: "Email not verified. A new verification link has been sent to your email.",
+          isVerified: false,
+          emailResent: emailSent
+        });
       }
 
       // Regenerate session to prevent session fixation
@@ -240,9 +260,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Store user in session
         (req.session as any).userId = user.id;
-        
-        res.json({ 
-          message: "Login successful", 
+
+        res.json({
+          message: "Login successful",
           user: {
             id: user.id,
             email: user.email,
@@ -255,6 +275,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error during login:", error);
       res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Verify email endpoint
+  app.post("/api/auth/verify", async (req, res) => {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({ message: "Verification token is required" });
+      }
+
+      const user = await storage.getUserByVerificationToken(token);
+
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired verification token" });
+      }
+
+      await storage.updateUser(user.id, {
+        isVerified: true,
+        verificationToken: null, // Clear token after usage
+      });
+
+      res.json({ message: "Email verified successfully" });
+    } catch (error) {
+      console.error("Error verifying email:", error);
+      res.status(500).json({ message: "Verification failed" });
     }
   });
 
@@ -276,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Strip sensitive fields before sending to client
       const { passwordHash, ...safeUser } = user;
       res.json(safeUser);
@@ -301,13 +348,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact form endpoint
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const { name, email, message } = req.body;
+
+      // Validate input
+      if (!name || !email || !message) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      if (message.length < 10) {
+        return res.status(400).json({ message: "Message must be at least 10 characters" });
+      }
+
+      // Send email
+      const emailSent = await sendContactEmail(name, email, message);
+
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send message. Please try again later." });
+      }
+
+      res.json({ message: "Message sent successfully!" });
+    } catch (error) {
+      console.error("Error sending contact message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+
   // Serve uploaded files with authentication
   app.use("/uploads", isAuthenticated, express.static(uploadDir));
 
   // Public routes
   app.get("/api/courses", async (_req, res) => {
     const courses = await storage.getAllCourses();
-    
+
     // Add lesson count to each course
     const coursesWithCounts = await Promise.all(
       courses.map(async (course) => {
@@ -318,7 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       })
     );
-    
+
     res.json(coursesWithCounts);
   });
 
@@ -336,11 +412,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
-      
+
       const updated = await storage.updateCourse(req.params.id, {
         viewsCount: (course.viewsCount || 0) + 1,
       });
-      
+
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -358,11 +434,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = isAuth ? (req.session as any)?.userId : null;
     const user = userId ? await storage.getUser(userId) : null;
     const hasActiveSubscription = user?.subscriptionStatus === "active";
-    
+
     // Sanitize meetings - remove Zoom links for unauthorized users
     const sanitizedMeetings = meetings.map(meeting => {
       const canAccess = !meeting.isPaidOnly || (isAuth && hasActiveSubscription);
-      
+
       if (canAccess) {
         return meeting;
       } else {
@@ -371,7 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return sanitizedMeeting;
       }
     });
-    
+
     res.json(sanitizedMeetings);
   });
 
@@ -401,7 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isPopular: isPopular || false,
       });
       const userId = (req.session as any)?.userId;
-      await logAdminAction(userId, "create", "pricing", `Created subscription plan: ${nameEn} - $${price}`);
+      await logAdminAction(userId, "create", "pricing", `Created subscription plan: ${nameEn} - $${price} `);
       res.json(plan);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to create plan" });
@@ -420,7 +496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isPopular: isPopular !== undefined ? isPopular : undefined,
       });
       const userId = (req.session as any)?.userId;
-      await logAdminAction(userId, "update", "pricing", `Updated subscription plan: ${nameEn || "Plan"}`);
+      await logAdminAction(userId, "update", "pricing", `Updated subscription plan: ${nameEn || "Plan"} `);
       res.json(plan);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to update plan" });
@@ -432,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const plan = await storage.getSubscriptionPlan(req.params.id);
       await storage.deleteSubscriptionPlan(req.params.id);
       const userId = (req.session as any)?.userId;
-      await logAdminAction(userId, "delete", "pricing", `Deleted subscription plan: ${plan?.nameEn || req.params.id}`);
+      await logAdminAction(userId, "delete", "pricing", `Deleted subscription plan: ${plan?.nameEn || req.params.id} `);
       res.json({ message: "Plan deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to delete plan" });
@@ -463,11 +539,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = isAuth ? (req.session as any)?.userId : null;
     const user = userId ? await storage.getUser(userId) : null;
     const hasActiveSubscription = user?.subscriptionStatus === "active";
-    
+
     // Sanitize meetings - remove Zoom links for unauthorized users
     const sanitizedMeetings = meetings.map(meeting => {
       const canAccess = !meeting.isPaidOnly || (isAuth && hasActiveSubscription);
-      
+
       if (canAccess) {
         return meeting;
       } else {
@@ -476,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return sanitizedMeeting;
       }
     });
-    
+
     res.json(sanitizedMeetings);
   });
 
@@ -486,7 +562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await fetch(
         "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22BNBUSDT%22]"
       );
-      
+
       let cryptoData = [];
       if (response.ok) {
         const data = await response.json();
@@ -498,7 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           change24h: parseFloat(item.priceChangePercent),
         }));
       }
-      
+
       const fallbackData = [
         { type: "crypto", symbol: "BTC", name: "Bitcoin", price: 43250.50, change24h: 2.45 },
         { type: "crypto", symbol: "ETH", name: "Ethereum", price: 2275.30, change24h: 1.82 },
@@ -511,7 +587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { type: "forex", symbol: "GBP/USD", name: "Pound", price: 1.2750, change24h: -0.15 },
         { type: "forex", symbol: "USD/JPY", name: "Yen", price: 148.65, change24h: 0.89 },
       ];
-      
+
       const marketData = cryptoData.length > 0 ? [...cryptoData, ...fallbackData.slice(3)] : fallbackData;
       res.json(marketData);
     } catch (error) {
@@ -538,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await fetch(
         "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22BNBUSDT%22]"
       );
-      
+
       if (!response.ok) {
         console.warn(`Binance API returned ${response.status}, using fallback data`);
         const fallbackPrices = [
@@ -548,15 +624,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ];
         return res.json(fallbackPrices);
       }
-      
+
       const data = await response.json();
-      
+
       const prices = data.map((item: any) => ({
         symbol: item.symbol.replace("USDT", ""),
         price: parseFloat(item.lastPrice),
         change24h: parseFloat(item.priceChangePercent),
       }));
-      
+
       res.json(prices);
     } catch (error) {
       console.error("Error fetching crypto prices:", error);
@@ -574,13 +650,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.session as any)?.userId;
       const subscription = await storage.getUserSubscription(userId);
-      
+
       if (!subscription) {
         return res.json(null);
       }
-      
+
       const plan = await storage.getSubscriptionPlan(subscription.planId);
-      
+
       res.json({
         ...subscription,
         plan: plan || null,
@@ -606,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId: (req.session as any)?.userId,
       });
-      
+
       const progress = await storage.upsertProgress(validated);
       res.json(progress);
     } catch (error: any) {
@@ -620,16 +696,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.session as any)?.userId;
       const { lessonId } = req.params;
       const { watchProgress, courseId } = req.body;
-      
+
       // Get lesson to check duration
       const lesson = await storage.getLesson(lessonId);
       if (!lesson) {
         return res.status(404).json({ message: "Lesson not found" });
       }
-      
+
       // Calculate if video is completed (watched at least 95% of duration)
       const completed = lesson.duration ? watchProgress >= (lesson.duration * 0.95) : false;
-      
+
       const progressData = {
         userId,
         lessonId,
@@ -638,7 +714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         watchProgress,
         completedAt: completed ? new Date() : undefined,
       };
-      
+
       const progress = await storage.upsertProgress(progressData);
       res.json(progress);
     } catch (error: any) {
@@ -652,15 +728,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (err.code === "LIMIT_FILE_SIZE") {
           return res.status(400).json({ message: "File size exceeds 10MB limit" });
         }
-        return res.status(400).json({ message: `Upload error: ${err.message}` });
+        return res.status(400).json({ message: `Upload error: ${err.message} ` });
       } else if (err) {
         return res.status(400).json({ message: err.message });
       }
-      
+
       try {
         const userId = (req.session as any)?.userId;
-        const proofImageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-        
+        const proofImageUrl = req.file ? `/ uploads / ${req.file.filename} ` : null;
+
         const validated = insertPaymentSchema.parse({
           userId,
           planId: req.body.planId,
@@ -709,17 +785,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (err.code === "LIMIT_FILE_SIZE") {
           return res.status(400).json({ message: "File size exceeds 10MB limit" });
         }
-        return res.status(400).json({ message: `Upload error: ${err.message}` });
+        return res.status(400).json({ message: `Upload error: ${err.message} ` });
       } else if (err) {
         return res.status(400).json({ message: err.message });
       }
-      
+
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       res.json({
-        url: `/uploads/${req.file.filename}`,
+        url: `/ uploads / ${req.file.filename} `,
         filename: req.file.filename,
         originalName: path.basename(req.file.originalname),
       });
@@ -833,7 +909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log admin action
-      await logAdminAction(adminId, "create-user", "users", `Created new user ${user.firstName} ${user.lastName} with role: ${role || 'user'}`, {
+      await logAdminAction(adminId, "create-user", "users", `Created new user ${user.firstName} ${user.lastName} with role: ${role || 'user'} `, {
         userId: user.id,
         email: user.email,
         role: role || "user",
@@ -861,15 +937,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUserId = (req.session as any)?.userId;
       const currentUser = await storage.getUser(currentUserId);
       const targetUser = await storage.getUser(id);
-      
+
       if (!targetUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       if (currentUserId === id) {
         return res.status(400).json({ message: "You cannot deactivate your own account" });
       }
-      
+
       // Role hierarchy check
       if (currentUser?.role === "support") {
         // Support can only deactivate regular users
@@ -883,7 +959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       // Admin can deactivate anyone
-      
+
       const user = await storage.deactivateUser(id);
       await logAdminAction(currentUserId, "deactivate", "users", `Deactivated user account ${id} (${targetUser.role})`);
       res.json(user);
@@ -899,15 +975,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.session as any)?.userId;
       const currentUser = await storage.getUser(userId);
       const targetUser = await storage.getUser(id);
-      
+
       if (!targetUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       // Role hierarchy check
       if (currentUser?.role === "support") {
         // Support can only activate regular users
@@ -921,7 +997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       // Admin can activate anyone
-      
+
       const user = await storage.activateUser(id);
       await logAdminAction(userId, "activate", "users", `Activated user account ${id} (${targetUser.role})`);
       res.json(user);
@@ -937,15 +1013,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUserId = (req.session as any)?.userId;
       const currentUser = await storage.getUser(currentUserId);
       const targetUser = await storage.getUser(id);
-      
+
       if (!targetUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       if (currentUserId === id) {
         return res.status(400).json({ message: "You cannot delete your own account" });
       }
-      
+
       // Role hierarchy check
       if (currentUser?.role === "support") {
         // Support can only delete regular users
@@ -959,7 +1035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       // Admin can delete anyone
-      
+
       await storage.deleteUser(id);
       await logAdminAction(currentUserId, "delete", "users", `Deleted user account ${id} (${targetUser.role})`);
       res.json({ message: "User deleted successfully" });
@@ -973,22 +1049,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userId = (req.session as any)?.userId;
-      
+
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const targetUser = await storage.getUser(id);
       if (!targetUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       if (!targetUser.subscriptionStatus || targetUser.subscriptionStatus === "none" || targetUser.subscriptionStatus === "cancelled") {
         return res.status(400).json({ message: "User does not have an active subscription" });
       }
-      
+
       const user = await storage.cancelUserSubscription(id);
-      await logAdminAction(userId, "cancel", "subscriptions", `Cancelled subscription for user ${targetUser.firstName} ${targetUser.lastName}`);
+      await logAdminAction(userId, "cancel", "subscriptions", `Cancelled subscription for user ${targetUser.firstName} ${targetUser.lastName} `);
       res.json(user);
     } catch (error: any) {
       console.error("Error cancelling subscription:", error);
@@ -1044,7 +1120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (err.code === "LIMIT_FILE_COUNT") {
           return res.status(400).json({ message: "Too many files uploaded" });
         }
-        return res.status(400).json({ message: `Upload error: ${err.message}` });
+        return res.status(400).json({ message: `Upload error: ${err.message} ` });
       }
       if (err) {
         return res.status(400).json({ message: err.message });
@@ -1095,18 +1171,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const courseDir = getCourseUploadDir(courseId);
           const thumbnailDir = path.join(courseDir, "thumbnails");
           ensureDir(thumbnailDir);
-          
+
           const finalPath = path.join(thumbnailDir, generateUniqueFilename(thumbnailFile.originalname, "thumbnail"));
           fs.renameSync(thumbnailFile.path, finalPath);
-          
+
           // Update course with thumbnail path
           await storage.updateCourse(courseId, {
-            thumbnailUrl: `/uploads/courses/${courseId}/thumbnails/${path.basename(finalPath)}`,
+            thumbnailUrl: `/ uploads / courses / ${courseId} /thumbnails/${path.basename(finalPath)} `,
           });
         }
 
         const userId = (req.session as any)?.userId;
-        await logAdminAction(userId, "create", "courses", `Created new course: ${validated.titleEn}`);
+        await logAdminAction(userId, "create", "courses", `Created new course: ${validated.titleEn} `);
         res.json(course);
       } catch (error: any) {
         // Cleanup uploaded files on error
@@ -1115,7 +1191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (fs.existsSync(filePath)) {
               fs.unlinkSync(filePath);
             }
-          } catch {}
+          } catch { }
         }
 
         // Cleanup course directory if created
@@ -1124,7 +1200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Optionally delete the course from database if it was created
           try {
             await storage.deleteCourse(courseId);
-          } catch {}
+          } catch { }
         }
 
         res.status(400).json({ message: error.message || "Failed to create course" });
@@ -1140,7 +1216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (err.code === "LIMIT_FILE_SIZE") {
           return res.status(400).json({ message: "File size exceeds 2GB limit" });
         }
-        return res.status(400).json({ message: `Upload error: ${err.message}` });
+        return res.status(400).json({ message: `Upload error: ${err.message} ` });
       }
       if (err) {
         return res.status(400).json({ message: err.message });
@@ -1182,21 +1258,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const courseDir = getCourseUploadDir(req.params.id);
           const thumbnailDir = path.join(courseDir, "thumbnails");
           ensureDir(thumbnailDir);
-          
+
           const extension = path.extname(thumbnailFile.originalname);
-          const newFilename = `${Date.now()}-${slugify(req.body.titleEn || "course")}${extension}`;
+          const newFilename = `${Date.now()} -${slugify(req.body.titleEn || "course")}${extension} `;
           const finalPath = path.join(thumbnailDir, newFilename);
-          
+
           fs.renameSync(thumbnailFile.path, finalPath);
-          
-          courseData.thumbnailUrl = `/uploads/courses/${req.params.id}/thumbnails/${newFilename}`;
+
+          courseData.thumbnailUrl = `/ uploads / courses / ${req.params.id} /thumbnails/${newFilename} `;
         } else {
           courseData.thumbnailUrl = currentCourse.thumbnailUrl;
         }
 
         const course = await storage.updateCourse(req.params.id, courseData);
         const userId = (req.session as any)?.userId;
-        await logAdminAction(userId, "update", "courses", `Updated course: ${courseData.titleEn}`);
+        await logAdminAction(userId, "update", "courses", `Updated course: ${courseData.titleEn} `);
         res.json(course);
       } catch (error: any) {
         uploadedFiles.forEach(file => {
@@ -1204,7 +1280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (fs.existsSync(file)) {
               fs.unlinkSync(file);
             }
-          } catch {}
+          } catch { }
         });
 
         res.status(400).json({ message: error.message || "Failed to update course" });
@@ -1217,7 +1293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const course = await storage.getCourse(req.params.id);
       await storage.deleteCourse(req.params.id);
       const userId = (req.session as any)?.userId;
-      await logAdminAction(userId, "delete", "courses", `Deleted course: ${course?.titleEn || req.params.id}`);
+      await logAdminAction(userId, "delete", "courses", `Deleted course: ${course?.titleEn || req.params.id} `);
       res.json({ message: "Course deleted" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1254,7 +1330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (err.code === "LIMIT_FILE_SIZE") {
           return res.status(400).json({ message: "Video size exceeds 2GB limit" });
         }
-        return res.status(400).json({ message: `Upload error: ${err.message}` });
+        return res.status(400).json({ message: `Upload error: ${err.message} ` });
       }
       if (err) {
         return res.status(400).json({ message: err.message });
@@ -1295,13 +1371,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const courseDir = getCourseUploadDir(validated.courseId);
           const videoDir = path.join(courseDir, "videos", lessonId);
           ensureDir(videoDir);
-          
+
           const finalPath = path.join(videoDir, generateUniqueFilename(videoFile.originalname, "lesson"));
           fs.renameSync(videoFile.path, finalPath);
-          
+
           // Update lesson with video paths
           await storage.updateLesson(lessonId, {
-            videoUrl: `/uploads/courses/${validated.courseId}/videos/${lessonId}/${path.basename(finalPath)}`,
+            videoUrl: `/ uploads / courses / ${validated.courseId} /videos/${lessonId}/${path.basename(finalPath)}`,
             videoFilePath: finalPath,
           });
         }
@@ -1314,16 +1390,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
           try {
             fs.unlinkSync(uploadedFilePath);
-          } catch {}
+          } catch { }
         }
-        
+
         // Clean up final video directory if lesson was created
         if (lessonId && lessonCourseId) {
           const videoDir = path.join(getCourseUploadDir(lessonCourseId), "videos", lessonId);
           if (fs.existsSync(videoDir)) {
             try {
               fs.rmSync(videoDir, { recursive: true, force: true });
-            } catch {}
+            } catch { }
           }
         }
 
@@ -1331,7 +1407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (lessonId) {
           try {
             await storage.deleteLesson(lessonId);
-          } catch {}
+          } catch { }
         }
 
         res.status(400).json({ message: error.message || "Failed to create lesson" });
@@ -1453,7 +1529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (req.file && fs.existsSync(req.file.path)) {
           try {
             fs.unlinkSync(req.file.path);
-          } catch {}
+          } catch { }
         }
         res.status(400).json({ message: error.message });
       }
@@ -1518,7 +1594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.status === "approved") {
         // Get the user being paid for
         const user = await storage.getUser(payment.userId);
-        
+
         await storage.updateUser(payment.userId, {
           subscriptionStatus: "active",
         });
@@ -1530,12 +1606,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Credit referrer with $10 if user was referred
+        // Credit referrer with 10% commission if user was referred
         if (user && user.referredBy) {
           const referrer = await storage.getUserByReferralCode(user.referredBy);
           if (referrer) {
-            await storage.addReferralEarnings(referrer.id, payment.userId, 10);
-            console.log(`Credited $10 to referrer ${referrer.email} for referral of ${user.email}`);
+            // Calculate 10% of the payment amount
+            const paymentAmount = parseFloat(payment.amount);
+            const commissionAmount = paymentAmount * 0.10; // 10% commission
+
+            await storage.addReferralEarnings(referrer.id, payment.userId, commissionAmount);
+            console.log(`Credited $${commissionAmount.toFixed(2)} (10% of $${paymentAmount.toFixed(2)}) to referrer ${referrer.email} for referral of ${user.email}`);
           }
         }
       }
@@ -1559,7 +1639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scheduledAt: new Date(req.body.scheduledAt),
         courseId: req.body.courseId || null,
       };
-      
+
       const meeting = await storage.createMeeting(meetingData);
       res.json(meeting);
     } catch (error: any) {
@@ -1573,15 +1653,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData = {
         ...req.body,
       };
-      
+
       if (req.body.scheduledAt) {
         updateData.scheduledAt = new Date(req.body.scheduledAt);
       }
-      
+
       if (req.body.courseId !== undefined) {
         updateData.courseId = req.body.courseId || null;
       }
-      
+
       const meeting = await storage.updateMeeting(req.params.id, updateData);
       res.json(meeting);
     } catch (error: any) {
@@ -1616,15 +1696,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           value: z.string(),
         })),
       });
-      
+
       const { settings: settingsArray } = settingsSchema.parse(req.body);
-      
+
       const updated = await Promise.all(
         settingsArray.map(async (setting) => {
           return await storage.upsertSetting(setting.key, setting.value);
         })
       );
-      
+
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1635,17 +1715,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user/profile", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.session as any)?.userId;
-      
+
       const profileSchema = z.object({
         firstName: z.string().min(1),
         lastName: z.string().min(1),
         phone: z.string().optional(),
       });
-      
+
       const validated = profileSchema.parse(req.body);
-      
+
       const updated = await storage.updateUser(userId, validated);
-      
+
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1655,27 +1735,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user/password", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.session as any)?.userId;
-      
+
       const passwordSchema = z.object({
         currentPassword: z.string().min(6),
         newPassword: z.string().min(6),
       });
-      
+
       const { currentPassword, newPassword } = passwordSchema.parse(req.body);
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
       if (!isValid) {
         return res.status(401).json({ message: "Current password is incorrect" });
       }
-      
+
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await storage.updateUser(userId, { passwordHash: hashedPassword });
-      
+
       res.json({ message: "Password updated successfully" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1687,15 +1767,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.session as any)?.userId;
       const subscription = await storage.getUserSubscription(userId);
-      
+
       if (!subscription) {
         return res.json(null);
       }
-      
-      const plan = subscription.planId 
+
+      const plan = subscription.planId
         ? await storage.getSubscriptionPlan(subscription.planId)
         : null;
-      
+
       res.json({ ...subscription, plan });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1707,16 +1787,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.session as any)?.userId;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const allTestimonials = await storage.getAllTestimonials();
       const userReviews = allTestimonials.filter(
         t => t.userId === userId
       );
-      
+
       res.json(userReviews);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1726,19 +1806,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/user/reviews", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.session as any)?.userId;
-      
+
       const reviewSchema = z.object({
         rating: z.number().min(1).max(5),
         content: z.string().min(10).max(1000),
       });
-      
+
       const { rating, content } = reviewSchema.parse(req.body);
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const testimonial = await storage.createTestimonial({
         nameEn: `${user.firstName} ${user.lastName}`,
         nameAr: `${user.firstName} ${user.lastName}`,
@@ -1750,7 +1830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         isActive: false, // Requires admin approval
       });
-      
+
       res.json(testimonial);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1762,13 +1842,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.session as any)?.userId;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
       const stats = await storage.getReferralStats(userId);
-      
+
       // Get referrals with user details
       const referrals = await db
         .select()
@@ -1804,7 +1884,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing referrer or referred user" });
       }
 
-      const transaction = await storage.addReferralEarnings(referrerId, referredUserId, amount || 10);
+      // Use provided amount (should be 10% of payment) or default to 0
+      const transaction = await storage.addReferralEarnings(referrerId, referredUserId, amount || 0);
       res.json(transaction);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1854,7 +1935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/withdrawals/admin", requireAdminRole, async (req, res) => {
     try {
       const withdrawals = await storage.getAllWithdrawalRequests();
-      
+
       // Get user details for each withdrawal
       const withUserDetails = await Promise.all(
         withdrawals.map(async (w) => {
@@ -1884,7 +1965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { startDate, endDate } = req.query;
       const userId = (req.session as any)?.userId;
       const user = await storage.getUser(userId);
-      
+
       console.log("📊 [LOGS API] Fetching logs for user:", {
         userId,
         userName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
@@ -1892,9 +1973,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate,
         timestamp: new Date().toISOString(),
       });
-      
+
       let logs;
-      
+
       if (startDate && endDate) {
         const start = new Date(startDate as string);
         const end = new Date(endDate as string);
@@ -1905,7 +1986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("📋 [LOGS API] Fetching all logs (no date range)");
         logs = await storage.getAllAdminLogs();
       }
-      
+
       console.log(`✅ [LOGS API] Retrieved ${logs?.length || 0} logs`, logs?.slice(0, 2));
       res.json(logs);
     } catch (error: any) {
@@ -2007,12 +2088,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 2. User has active subscription
       // 3. Course is free
       // 4. Lesson is free
-      const hasAccess = 
-        user?.role === "admin" || 
-        userSub?.status === "active" || 
-        course.isFree || 
+      const hasAccess =
+        user?.role === "admin" ||
+        userSub?.status === "active" ||
+        course.isFree ||
         lesson.isFree;
-      
+
       if (!hasAccess) {
         return res.status(403).send("Forbidden");
       }
@@ -2033,7 +2114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
         // Critical: Set to inline and hide filename from browser UI
         res.setHeader("Content-Disposition", "inline");
-        
+
         // Get file size for range request support
         const stat = fs.statSync(lesson.videoFilePath);
         const fileSize = stat.size;
