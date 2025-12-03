@@ -51,12 +51,12 @@ function Router() {
       <Route path="/preview/:id" component={CoursePreview} />
       <Route path="/course/:id" component={CourseDetail} />
       <Route path="/news" component={News} />
+      <Route path="/subscribe/:planId" component={Subscribe} />
 
       {/* Protected Routes */}
       {isAuthenticated && (
         <>
           <Route path="/dashboard" component={DashboardNew} />
-          <Route path="/subscribe/:planId?" component={Subscribe} />
 
           {/* Admin Routes */}
           <Route path="/admin">

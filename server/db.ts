@@ -10,7 +10,7 @@ import * as schema from "@shared/schema";
 
 // Create a Postgres pool
 export const pool = new Pool({
-  connectionString: "postgres://postgres:1234@localhost:5432/leedaca",
+  connectionString: "postgresql://neondb_owner:npg_1SQTJadUneM8@ep-damp-breeze-a9jpfuuz-pooler.gwc.azure.neon.tech/neondb?sslmode=require",
 });
 
 // Initialize Drizzle ORM with the pool
